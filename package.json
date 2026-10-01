@@ -1,17 +1,14 @@
 {
-  "name": "operations-platform",
-  "version": "1.0.0",
-  "description": "Operations Platform - Agency Operations, Team Management & Financial Control",
+  "name": "operations-workspace",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Operations Workspace - multi-tenant clients, tasks, payroll and money, backed by Supabase",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "devDependencies": {
-    "vite": "^6.2.0"
+    "build": "node build.mjs",
+    "dev": "node build.mjs && node serve.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.117.2"
+    "@supabase/supabase-js": "^2.49.0"
   }
 }

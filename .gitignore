@@ -3,5 +3,8 @@ dist
 .env
 .env.local
 .env.*.local
+.vercel
 .DS_Store
 *.log
+supabase/setup.sql
+Operations Platform.html
