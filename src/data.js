@@ -1,185 +1,12 @@
-// Data and domain logic for Operations Workspace
+// Multi-Tenant Data Layer for Operations Workspace
 
 export const BRANDS = [
   { id: 'all', name: 'All brands' },
-  { id: 'hep', name: 'Hephaestus Studio' },
-  { id: 'kln', name: 'Kiln' },
-  { id: 'ntg', name: 'Northgate' },
-  { id: 'tlw', name: 'Tallow' }
+  { id: 'main', name: 'Primary Brand' },
+  { id: 'studio', name: 'Design Studio' },
+  { id: 'tech', name: 'Technology' },
+  { id: 'marketing', name: 'Marketing' }
 ];
-
-export const CLIENTS = [
-  { id: 'arc3', name: 'ARC3', brand: 'hep', retainer: 420000, since: 'Mar 2026', contact: 'Karan Shah', status: 'Active' },
-  { id: 'mer', name: 'Meridian Foods', brand: 'kln', retainer: 180000, since: 'Nov 2024', contact: 'Meera Iyer', status: 'Active' },
-  { id: 'sah', name: 'Sahyadri Logistics', brand: 'ntg', retainer: 240000, since: 'Jun 2025', contact: 'Aditi Kulkarni', status: 'Active' },
-  { id: 'oak', name: 'Oakline Clinics', brand: 'hep', retainer: 150000, since: 'Jan 2026', contact: 'Dr Nikhil Bose', status: 'Active' },
-  { id: 'lum', name: 'Lumen Schools', brand: 'tlw', retainer: 95000, since: 'Apr 2026', contact: 'Farah Khan', status: 'Active' }
-];
-
-export const TEAM_MEMBERS = [
-  {
-    id: 'founder',
-    name: 'Founder (You)',
-    email: 'founder@workspace.com',
-    role: 'Owner & Founder',
-    badge: 'Owner',
-    isFounder: true,
-    allowedClients: ['arc3', 'mer', 'sah', 'oak', 'lum']
-  },
-  {
-    id: 'rakesh',
-    name: 'Rakesh Kumar',
-    email: 'rakesh@workspace.com',
-    role: 'Team member',
-    badge: 'Team',
-    isFounder: false,
-    allowedClients: [] // 0 of 5 clients visible
-  },
-  {
-    id: 'priya',
-    name: 'Priya Nair',
-    email: 'priya@workspace.com',
-    role: 'Operations lead',
-    badge: 'Operations',
-    isFounder: false,
-    allowedClients: ['arc3', 'mer', 'sah', 'oak', 'lum']
-  },
-  {
-    id: 'rohan',
-    name: 'Rohan Das',
-    email: 'rohan@workspace.com',
-    role: 'Designer',
-    badge: 'Designer',
-    isFounder: false,
-    allowedClients: ['arc3', 'mer', 'oak']
-  },
-  {
-    id: 'sana',
-    name: 'Sana Kapoor',
-    email: 'sana@workspace.com',
-    role: 'Finance lead',
-    badge: 'Finance',
-    isFounder: false,
-    allowedClients: ['arc3', 'mer', 'sah', 'oak', 'lum']
-  },
-  {
-    id: 'dev',
-    name: 'Dev Malhotra',
-    email: 'dev@workspace.com',
-    role: 'Developer',
-    badge: 'Developer',
-    isFounder: false,
-    allowedClients: ['sah', 'oak', 'lum']
-  }
-];
-
-// Initial 9 tasks
-export const TASKS_DATA = [
-  {
-    id: 't1',
-    title: 'Q4 campaign concepts',
-    client: 'arc3',
-    assignee: 'rohan',
-    status: 'not_started',
-    date: '2026-10-01',
-    hours: 12,
-    priority: 'High',
-    description: 'Create moodboard and initial visual direction for the Q4 promotional push.'
-  },
-  {
-    id: 't2',
-    title: 'Monthly spend report',
-    client: 'mer',
-    assignee: 'sana',
-    status: 'in_progress',
-    date: '2026-10-05',
-    hours: 4,
-    priority: 'Medium',
-    description: 'Compile September production and vendor expenses for client sign-off.'
-  },
-  {
-    id: 't3',
-    title: 'Patient intake form redesign',
-    client: 'oak',
-    assignee: 'rohan',
-    status: 'review',
-    date: '2026-10-06',
-    hours: 18,
-    priority: 'High',
-    description: 'Update mobile UX for online patient consultation registration.'
-  },
-  {
-    id: 't4',
-    title: 'Investor update draft',
-    client: 'arc3',
-    assignee: 'founder',
-    status: 'blocked',
-    date: '2026-10-07',
-    hours: 6,
-    priority: 'Medium',
-    description: 'Draft quarterly progress deck pending financial reconciliation numbers.'
-  },
-  {
-    id: 't5',
-    title: 'Admissions microsite',
-    client: 'lum',
-    assignee: 'dev',
-    status: 'in_progress',
-    date: '2026-10-08',
-    hours: 24,
-    priority: 'High',
-    description: 'Develop responsive landing pages for the 2027 admissions cycle.'
-  },
-  {
-    id: 't6',
-    title: 'Route dashboard, phase 2',
-    client: 'sah',
-    assignee: 'dev',
-    status: 'completed',
-    date: '2026-10-10',
-    hours: 32,
-    priority: 'Medium',
-    description: 'Integrate real-time GPS telemetry feed with logistics operations.'
-  },
-  {
-    id: 't7',
-    title: 'Parent newsletter template',
-    client: 'lum',
-    assignee: 'rohan',
-    status: 'not_started',
-    date: '2026-10-12',
-    hours: 8,
-    priority: 'Low',
-    description: 'Build reusable HTML email template matching the updated brand guidelines.'
-  },
-  {
-    id: 't8',
-    title: 'Clinic site migration',
-    client: 'oak',
-    assignee: 'dev',
-    status: 'not_started',
-    date: '2026-10-14',
-    hours: 16,
-    priority: 'High',
-    description: 'Deploy the new staging build to AWS production cluster.'
-  },
-  {
-    id: 't9',
-    title: 'Menu card print proofs',
-    client: 'mer',
-    assignee: 'priya',
-    status: 'late',
-    date: '2026-09-29',
-    hours: 10,
-    priority: 'Medium',
-    description: 'Final color inspection with printer before 5,000 unit print run.'
-  }
-];
-
-export const HOLIDAYS_2026_OCT = {
-  '2026-10-02': 'Gandhi Jayanti',
-  '2026-10-20': 'Dussehra / Vijayadashami'
-};
 
 export const STATUS_LIST = [
   { id: 'total', label: 'TOTAL', color: '#4F46E5', bg: '#EEF2FF', border: '#6366F1' },
@@ -191,72 +18,121 @@ export const STATUS_LIST = [
   { id: 'late', label: 'LATE', color: '#991B1B', bg: '#FEF2F2', border: '#FCA5A5' }
 ];
 
-export function getClient(id) {
-  return CLIENTS.find(c => c.id === id);
-}
+export const HOLIDAYS_2026_OCT = {
+  '2026-10-02': 'Gandhi Jayanti',
+  '2026-10-20': 'Dussehra / Vijayadashami'
+};
 
-export function getMember(id) {
-  return TEAM_MEMBERS.find(m => m.id === id);
-}
+// Optional Sample Data for users who want to explore with 1-click
+export const SAMPLE_CLIENTS = [
+  { id: 'c1', name: 'Apex Media', brand: 'marketing', retainer: 250000, since: 'May 2026', contact: 'Aarav Patel', status: 'Active' },
+  { id: 'c2', name: 'Zenith Health', brand: 'tech', retainer: 180000, since: 'Jan 2026', contact: 'Dr. Sunita Rao', status: 'Active' },
+  { id: 'c3', name: 'Blue Horizon Logistics', brand: 'main', retainer: 320000, since: 'Feb 2025', contact: 'Vikram Joshi', status: 'Active' }
+];
 
-export function getBrand(id) {
-  return BRANDS.find(b => b.id === id);
-}
+export const SAMPLE_TASKS = [
+  {
+    id: 'st1',
+    title: 'Brand identity refresh kickoff',
+    client: 'c1',
+    assignee: '', // will link to current user
+    status: 'in_progress',
+    date: '2026-10-01',
+    hours: 12,
+    priority: 'High',
+    description: 'Initial client alignment call and visual moodboard sign-off.'
+  },
+  {
+    id: 'st2',
+    title: 'Q4 Budget & Retainer Reconciliation',
+    client: 'c2',
+    assignee: '',
+    status: 'review',
+    date: '2026-10-06',
+    hours: 6,
+    priority: 'Medium',
+    description: 'Review monthly contractor spend and production deliverables.'
+  },
+  {
+    id: 'st3',
+    title: 'Warehouse telemetry dashboard deployment',
+    client: 'c3',
+    assignee: '',
+    status: 'not_started',
+    date: '2026-10-12',
+    hours: 24,
+    priority: 'High',
+    description: 'Final staging regression testing before client hand-off.'
+  }
+];
 
-// Session & LocalStorage helpers
-const AUTH_KEY = 'ops_auth_current_user_v1';
-const STORAGE_KEY = 'ops_workspace_state_v1';
+// Multi-Tenant Local Storage Keys
+const WS_KEY = 'ops_multi_tenant_workspaces_v2';
+const ACTIVE_WS_KEY = 'ops_active_workspace_id_v2';
+const ACTIVE_USER_KEY = 'ops_active_user_id_v2';
 
-export function getSessionUser() {
+export function getWorkspaces() {
   try {
-    const raw = localStorage.getItem(AUTH_KEY);
-    if (!raw) return 'rakesh'; // default active user session
-    return raw;
+    const raw = localStorage.getItem(WS_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
   } catch (e) {
-    return 'rakesh';
+    return [];
   }
 }
 
-export function setSessionUser(userId) {
+export function saveWorkspace(ws) {
   try {
-    if (!userId) {
-      localStorage.removeItem(AUTH_KEY);
+    const all = getWorkspaces();
+    const idx = all.findIndex(w => w.id === ws.id);
+    if (idx >= 0) {
+      all[idx] = ws;
     } else {
-      localStorage.setItem(AUTH_KEY, userId);
+      all.push(ws);
+    }
+    localStorage.setItem(WS_KEY, JSON.stringify(all));
+  } catch (e) {}
+}
+
+export function getActiveWorkspaceId() {
+  return localStorage.getItem(ACTIVE_WS_KEY) || null;
+}
+
+export function setActiveWorkspaceId(id) {
+  if (!id) {
+    localStorage.removeItem(ACTIVE_WS_KEY);
+  } else {
+    localStorage.setItem(ACTIVE_WS_KEY, id);
+  }
+}
+
+export function getSessionUserId() {
+  return localStorage.getItem(ACTIVE_USER_KEY) || null;
+}
+
+export function setSessionUserId(id) {
+  if (!id) {
+    localStorage.removeItem(ACTIVE_USER_KEY);
+  } else {
+    localStorage.setItem(ACTIVE_USER_KEY, id);
+  }
+}
+
+export function deleteWorkspace(wsId) {
+  try {
+    const all = getWorkspaces().filter(w => w.id !== wsId);
+    localStorage.setItem(WS_KEY, JSON.stringify(all));
+    if (getActiveWorkspaceId() === wsId) {
+      setActiveWorkspaceId(null);
+      setSessionUserId(null);
     }
   } catch (e) {}
 }
 
-export function loadSavedState() {
+export function purgeLegacyStorage() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch (e) {
-    return null;
-  }
-}
-
-export function persistState(state) {
-  try {
-    const payload = {
-      viewAs: state.viewAs,
-      tasks: state.tasks,
-      clients: state.clients,
-      teamMembers: state.teamMembers,
-      activeStatusFilter: state.activeStatusFilter,
-      selectedBrand: state.selectedBrand,
-      selectedAssignee: state.selectedAssignee,
-      currentYear: state.currentYear,
-      currentMonth: state.currentMonth
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  } catch (e) {}
-}
-
-export function resetSavedState() {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(AUTH_KEY);
+    localStorage.removeItem('ops_workspace_state');
+    localStorage.removeItem('ops_sample_data');
+    localStorage.removeItem('ops_active_user_id');
   } catch (e) {}
 }

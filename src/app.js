@@ -1,70 +1,96 @@
-// Main Application for Operations Workspace
+// Complete Multi-Tenant Application for Operations Workspace
 import {
-  BRANDS, CLIENTS, TEAM_MEMBERS, TASKS_DATA, HOLIDAYS_2026_OCT,
-  STATUS_LIST, getClient, getMember, getBrand,
-  getSessionUser, setSessionUser, loadSavedState, persistState
+  BRANDS, STATUS_LIST, HOLIDAYS_2026_OCT, SAMPLE_CLIENTS, SAMPLE_TASKS,
+  getWorkspaces, saveWorkspace, deleteWorkspace, purgeLegacyStorage,
+  getActiveWorkspaceId, setActiveWorkspaceId,
+  getSessionUserId, setSessionUserId
 } from './data.js';
 import { icon, workspaceLogo } from './icons.js';
 import {
-  isConfigured, getDbClients, getDbTeamMembers, getDbTasks,
-  insertDbTask, updateDbTask, insertDbTeamMember, subscribeToTaskChanges
+  isConfigured, getDbWorkspaces, insertDbWorkspace,
+  getDbClients, insertDbClient, deleteDbClient,
+  getDbTeamMembers, insertDbTeamMember, findDbUserByEmail, fetchFullWorkspace, clearDbWorkspaceData,
+  getDbTasks, insertDbTask, updateDbTask, deleteDbTask,
+  subscribeToWorkspaceChanges
 } from './supabase.js';
 
 class WorkspaceApp {
   constructor() {
-    const saved = loadSavedState();
-    const sessionUserId = getSessionUser();
-
     this.state = {
-      isLoggedIn: Boolean(sessionUserId),
+      isLoggedIn: false,
+      authTab: 'signup', // 'signup' | 'signin' | 'sandbox'
       currentView: 'dashboard', // 'dashboard' | 'tasks' | 'clients'
-      viewAs: sessionUserId || 'rakesh',
-      loginTab: 'signup', // 'profiles' | 'email' | 'signup' (Default to signup if requested)
-      tasks: saved?.tasks || JSON.parse(JSON.stringify(TASKS_DATA)),
-      clients: saved?.clients || JSON.parse(JSON.stringify(CLIENTS)),
-      teamMembers: saved?.teamMembers || TEAM_MEMBERS,
-      activeStatusFilter: saved?.activeStatusFilter || 'total',
-      selectedBrand: saved?.selectedBrand || 'all',
-      selectedAssignee: saved?.selectedAssignee || 'all',
-      currentYear: 2026,
-      currentMonth: 9, // 0-indexed: 9 = October
+
+      // Multi-tenant core
+      workspaces: getWorkspaces(),
+      activeWorkspace: null,
+      currentUser: null,
+
+      // Tenant isolated data
+      clients: [],
+      tasks: [],
+      teamMembers: [],
+
+      // Filters & controls
+      activeStatusFilter: 'total',
+      selectedBrand: 'all',
+      selectedAssignee: 'all',
       searchQuery: '',
+
+      // Modals
       modalOpen: false,
-      modalType: 'addTask', // 'addTask' | 'taskDetail' | 'addMember'
+      modalType: 'addTask', // 'addTask' | 'addClient' | 'addMember' | 'taskDetail'
       selectedTask: null,
       toast: null,
       cloudConnected: isConfigured
     };
 
+    this.initSession();
     this.initEventListeners();
     this.render();
-    this.initDatabase();
   }
 
-  async initDatabase() {
-    if (isConfigured) {
+  async initSession() {
+    purgeLegacyStorage();
+    const wsId = getActiveWorkspaceId();
+    const userId = getSessionUserId();
+    const allWs = getWorkspaces();
+
+    if (isConfigured && wsId) {
       try {
-        const [cloudClients, cloudTeam, cloudTasks] = await Promise.all([
-          getDbClients(),
-          getDbTeamMembers(),
-          getDbTasks()
-        ]);
+        const fullWs = await fetchFullWorkspace(wsId);
+        if (fullWs) {
+          const user = (fullWs.teamMembers || []).find(m => m.id === userId) || fullWs.teamMembers?.[0];
+          if (user) {
+            this.setState({
+              isLoggedIn: true,
+              activeWorkspace: fullWs,
+              currentUser: user,
+              clients: fullWs.clients || [],
+              tasks: fullWs.tasks || [],
+              teamMembers: fullWs.teamMembers || []
+            });
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Cloud session restore error', e);
+      }
+    }
 
-        this.setState({
-          clients: cloudClients,
-          teamMembers: cloudTeam,
-          tasks: cloudTasks,
-          cloudConnected: true
-        });
-
-        // Real-time listener for tasks across multiple users
-        this._unsubscribe = subscribeToTaskChanges(async () => {
-          const freshTasks = await getDbTasks();
-          this.setState({ tasks: freshTasks });
-          this.toast('Sync: Tasks updated from cloud database.');
-        });
-      } catch (err) {
-        console.warn('Could not sync with Supabase, using local state:', err);
+    if (wsId && userId) {
+      const activeWs = allWs.find(w => w.id === wsId);
+      if (activeWs) {
+        const team = activeWs.teamMembers || [];
+        const user = team.find(m => m.id === userId);
+        if (user) {
+          this.state.isLoggedIn = true;
+          this.state.activeWorkspace = activeWs;
+          this.state.currentUser = user;
+          this.state.clients = activeWs.clients || [];
+          this.state.tasks = activeWs.tasks || [];
+          this.state.teamMembers = team;
+        }
       }
     }
   }
@@ -75,8 +101,20 @@ class WorkspaceApp {
     } else {
       this.state = { ...this.state, ...updater };
     }
-    persistState(this.state);
+    this.saveActiveTenant();
     this.render();
+  }
+
+  saveActiveTenant() {
+    if (this.state.activeWorkspace) {
+      const updatedWs = {
+        ...this.state.activeWorkspace,
+        clients: this.state.clients,
+        tasks: this.state.tasks,
+        teamMembers: this.state.teamMembers
+      };
+      saveWorkspace(updatedWs);
+    }
   }
 
   initEventListeners() {
@@ -95,51 +133,331 @@ class WorkspaceApp {
     }, 3500);
   }
 
-  login(userId) {
-    setSessionUser(userId);
-    const member = this.state.teamMembers.find(m => m.id === userId) || this.state.teamMembers[0];
+  // Multi-tenant registration
+  async registerNewTenant({ companyName, fullName, email, password, role }) {
+    const wsId = 'ws_' + Date.now();
+    const userId = 'u_' + Date.now();
+    const isFounder = role === 'Owner & Founder';
+
+    const founderMember = {
+      id: userId,
+      workspaceId: wsId,
+      name: fullName,
+      email,
+      password: password || 'workspace123',
+      role,
+      isFounder,
+      allowedClients: ['*'] // full access
+    };
+
+    const newWorkspace = {
+      id: wsId,
+      name: companyName,
+      ownerId: userId,
+      clients: [],
+      tasks: [],
+      teamMembers: [founderMember]
+    };
+
+    // Save locally
+    saveWorkspace(newWorkspace);
+    setActiveWorkspaceId(wsId);
+    setSessionUserId(userId);
+
+    // Save to Supabase Cloud if configured
+    if (isConfigured) {
+      await insertDbWorkspace(newWorkspace);
+      await insertDbTeamMember(founderMember);
+    }
+
     this.setState({
       isLoggedIn: true,
-      viewAs: userId,
+      activeWorkspace: newWorkspace,
+      currentUser: founderMember,
+      workspaces: getWorkspaces(),
+      clients: [],
+      tasks: [],
+      teamMembers: [founderMember],
       currentView: 'dashboard'
     });
-    this.toast(`Welcome, ${member.name}! Signed in as ${member.role}.`);
+
+    this.toast(`Workspace “${companyName}” ban gaya! Welcome, ${fullName}!`);
+  }
+
+  loginUser(wsId, userId) {
+    const allWs = getWorkspaces();
+    const targetWs = allWs.find(w => w.id === wsId);
+    if (!targetWs) return;
+
+    const user = (targetWs.teamMembers || []).find(m => m.id === userId);
+    if (!user) return;
+
+    setActiveWorkspaceId(wsId);
+    setSessionUserId(userId);
+
+    this.setState({
+      isLoggedIn: true,
+      activeWorkspace: targetWs,
+      currentUser: user,
+      clients: targetWs.clients || [],
+      tasks: targetWs.tasks || [],
+      teamMembers: targetWs.teamMembers || [],
+      currentView: 'dashboard'
+    });
+
+    this.toast(`Welcome back, ${user.name}!`);
+  }
+
+  async loginWithEmail(email, password) {
+    if (!email) {
+      this.toast('Kripya email enter karein.');
+      return;
+    }
+
+    // 1. Supabase Cloud Check
+    if (isConfigured) {
+      try {
+        const cloudUser = await findDbUserByEmail(email, password);
+        if (cloudUser) {
+          const fullWs = await fetchFullWorkspace(cloudUser.workspace_id);
+          if (fullWs) {
+            setActiveWorkspaceId(fullWs.id);
+            setSessionUserId(cloudUser.id);
+            saveWorkspace(fullWs);
+
+            this.setState({
+              isLoggedIn: true,
+              activeWorkspace: fullWs,
+              currentUser: cloudUser,
+              clients: fullWs.clients || [],
+              tasks: fullWs.tasks || [],
+              teamMembers: fullWs.teamMembers || [],
+              currentView: 'dashboard'
+            });
+            this.toast(`Welcome back, ${cloudUser.name}!`);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Cloud login error', e);
+      }
+    }
+
+    // 2. Local Workspaces Check
+    const allWs = getWorkspaces();
+    for (const ws of allWs) {
+      const match = (ws.teamMembers || []).find(m =>
+        m.email.toLowerCase() === email.toLowerCase() &&
+        (!password || !m.password || m.password === password)
+      );
+      if (match) {
+        setActiveWorkspaceId(ws.id);
+        setSessionUserId(match.id);
+        this.setState({
+          isLoggedIn: true,
+          activeWorkspace: ws,
+          currentUser: match,
+          clients: ws.clients || [],
+          tasks: ws.tasks || [],
+          teamMembers: ws.teamMembers || [],
+          currentView: 'dashboard'
+        });
+        this.toast(`Welcome back, ${match.name}!`);
+        return;
+      }
+    }
+
+    this.toast('Invalid Email ya Password. Kripya check karein ya naya Workspace banayein.');
+  }
+
+  deleteWorkspaceEntry(wsId) {
+    if (!confirm('Is workspace ko delete karein?')) return;
+    deleteWorkspace(wsId);
+    this.setState({ workspaces: getWorkspaces() });
+    this.toast('Workspace delete ho gaya.');
   }
 
   logout() {
-    setSessionUser(null);
+    setActiveWorkspaceId(null);
+    setSessionUserId(null);
+
     this.setState({
       isLoggedIn: false,
-      loginTab: 'signup', // show signup/login choice
-      currentView: 'dashboard'
+      activeWorkspace: null,
+      currentUser: null,
+      clients: [],
+      tasks: [],
+      teamMembers: [],
+      authTab: 'signin',
+      currentView: 'dashboard',
+      workspaces: getWorkspaces()
     });
+
     this.toast('Logged out successfully.');
   }
 
-  async createNewMember({ name, email, role, password }) {
-    const isFounder = role === 'Owner & Founder';
-    let allowedClients = [];
-    if (isFounder || role === 'Operations lead' || role === 'Finance lead') {
-      allowedClients = ['arc3', 'mer', 'sah', 'oak', 'lum'];
-    } else if (role === 'Designer') {
-      allowedClients = ['arc3', 'mer', 'oak'];
-    } else if (role === 'Developer') {
-      allowedClients = ['sah', 'oak', 'lum'];
+  // 1-Click Load Sample Demo Data into current tenant
+  loadSampleDemoData() {
+    if (!this.state.activeWorkspace) return;
+
+    const wsId = this.state.activeWorkspace.id;
+    const userId = this.state.currentUser.id;
+
+    const sampleClientsWithWs = SAMPLE_CLIENTS.map(c => ({
+      ...c,
+      id: 'c_' + Date.now() + Math.floor(Math.random() * 1000),
+      workspaceId: wsId
+    }));
+
+    const sampleTasksWithWs = SAMPLE_TASKS.map((t, idx) => ({
+      ...t,
+      id: 't_' + Date.now() + idx,
+      workspaceId: wsId,
+      client: sampleClientsWithWs[idx % sampleClientsWithWs.length].id,
+      assignee: userId
+    }));
+
+    const updatedClients = [...this.state.clients, ...sampleClientsWithWs];
+    const updatedTasks = [...this.state.tasks, ...sampleTasksWithWs];
+
+    this.setState({
+      clients: updatedClients,
+      tasks: updatedTasks
+    });
+
+    if (isConfigured) {
+      sampleClientsWithWs.forEach(c => insertDbClient(c));
+      sampleTasksWithWs.forEach(t => insertDbTask(t));
     }
 
-    const newId = 'u_' + Date.now();
+    this.toast('Sample demo data loaded successfully!');
+  }
+
+  // 1-Click Wipe All Data for this tenant
+  async clearAllWorkspaceData() {
+    if (!confirm('Kya aap is workspace ka saara data (clients aur tasks) permanently delete karna chahte hain?')) return;
+
+    const wsId = this.state.activeWorkspace?.id;
+    this.setState({
+      clients: [],
+      tasks: []
+    });
+
+    if (isConfigured && wsId) {
+      await clearDbWorkspaceData(wsId);
+    }
+
+    this.toast('Saara data delete ho gaya! Workspace bilkul clean hai.');
+  }
+
+  // Client CRUD
+  async createClient({ name, brand, retainer, contact }) {
+    if (!this.state.activeWorkspace) return;
+
+    const newClient = {
+      id: 'client_' + Date.now(),
+      workspaceId: this.state.activeWorkspace.id,
+      name,
+      brand: brand || 'main',
+      retainer: Number(retainer) || 0,
+      since: 'Oct 2026',
+      contact: contact || '',
+      status: 'Active'
+    };
+
+    const updated = [newClient, ...this.state.clients];
+    this.setState({
+      clients: updated,
+      modalOpen: false
+    });
+
+    if (isConfigured) {
+      await insertDbClient(newClient);
+    }
+
+    this.toast(`Client “${name}” create ho gaya!`);
+  }
+
+  async removeClient(clientId) {
+    if (!confirm('Is client ko delete karein? Iske tasks bhi delete ho jayenge.')) return;
+
+    const updatedClients = this.state.clients.filter(c => c.id !== clientId);
+    const updatedTasks = this.state.tasks.filter(t => t.client !== clientId);
+
+    this.setState({
+      clients: updatedClients,
+      tasks: updatedTasks
+    });
+
+    if (isConfigured) {
+      await deleteDbClient(clientId);
+    }
+
+    this.toast('Client delete ho gaya.');
+  }
+
+  // Task CRUD
+  async createTask({ title, client, assignee, date, hours, priority, description }) {
+    if (!this.state.activeWorkspace) return;
+
+    const newTask = {
+      id: 'task_' + Date.now(),
+      workspaceId: this.state.activeWorkspace.id,
+      title,
+      client: client || (this.state.clients[0]?.id || ''),
+      assignee: assignee || this.state.currentUser.id,
+      status: 'not_started',
+      date: date || '2026-10-01',
+      hours: Number(hours) || 8,
+      priority: priority || 'Medium',
+      description: description || 'Custom workspace task.'
+    };
+
+    const updated = [newTask, ...this.state.tasks];
+    this.setState({
+      tasks: updated,
+      modalOpen: false
+    });
+
+    if (isConfigured) {
+      await insertDbTask(newTask);
+    }
+
+    this.toast(`Task “${title}” create ho gaya!`);
+  }
+
+  async removeTask(taskId) {
+    const updatedTasks = this.state.tasks.filter(t => t.id !== taskId);
+    this.setState({
+      tasks: updatedTasks,
+      modalOpen: false,
+      selectedTask: null
+    });
+
+    if (isConfigured) {
+      await deleteDbTask(taskId);
+    }
+
+    this.toast('Task delete ho gaya.');
+  }
+
+  // Member CRUD
+  async createTeamMember({ name, email, password, role }) {
+    if (!this.state.activeWorkspace) return;
+
+    const isFounder = role === 'Owner & Founder';
     const newMember = {
-      id: newId,
+      id: 'u_' + Date.now(),
+      workspaceId: this.state.activeWorkspace.id,
       name,
       email,
+      password: password || 'team123',
       role,
-      badge: role.split(' ')[0],
       isFounder,
-      allowedClients
+      allowedClients: isFounder ? ['*'] : this.state.clients.map(c => c.id)
     };
 
     const updatedTeam = [...this.state.teamMembers, newMember];
-
     this.setState({
       teamMembers: updatedTeam,
       modalOpen: false
@@ -149,73 +467,24 @@ class WorkspaceApp {
       await insertDbTeamMember(newMember);
     }
 
-    this.login(newId);
-    this.toast(`Nayi ID ban gayi! Welcome, ${newMember.name}!`);
+    this.toast(`Naya member “${name}” ID create ho gaya!`);
   }
 
-  getCurrentUser() {
-    return this.state.teamMembers.find(m => m.id === this.state.viewAs) || this.state.teamMembers[0];
-  }
-
-  isFounder() {
-    return this.getCurrentUser().isFounder;
-  }
-
-  getVisibleClients() {
-    const user = this.getCurrentUser();
-    if (user.isFounder) return this.state.clients;
-    return this.state.clients.filter(c => (user.allowedClients || []).includes(c.id));
-  }
-
-  getVisibleTasks() {
-    const user = this.getCurrentUser();
-    let tasks = this.state.tasks;
-
-    // Filter by allowed clients if not founder
-    if (!user.isFounder) {
-      tasks = tasks.filter(t => (user.allowedClients || []).includes(t.client) || t.assignee === user.id);
-    }
-
-    // Filter by selected assignee dropdown
-    if (this.state.selectedAssignee !== 'all') {
-      tasks = tasks.filter(t => t.assignee === this.state.selectedAssignee);
-    }
-
-    // Filter by selected brand dropdown
-    if (this.state.selectedBrand !== 'all') {
-      tasks = tasks.filter(t => {
-        const client = getClient(t.client);
-        return client && client.brand === this.state.selectedBrand;
-      });
-    }
-
-    // Filter by search query
-    if (this.state.searchQuery.trim()) {
-      const q = this.state.searchQuery.toLowerCase();
-      tasks = tasks.filter(t =>
-        t.title.toLowerCase().includes(q) ||
-        (getClient(t.client)?.name || '').toLowerCase().includes(q)
-      );
-    }
-
-    return tasks;
-  }
-
+  // Render entrypoint
   render() {
     const appEl = document.getElementById('app');
     if (!appEl) return;
 
-    // If user is logged out, render the Login/Registration Screen
     if (!this.state.isLoggedIn) {
-      appEl.innerHTML = this.renderLoginPage();
-      this.attachLoginEvents();
+      appEl.innerHTML = this.renderAuthScreen();
+      this.attachAuthEvents();
       return;
     }
 
-    const user = this.getCurrentUser();
-    const isFounder = user.isFounder;
-    const visibleClients = this.getVisibleClients();
-    const visibleTasks = this.getVisibleTasks();
+    const ws = this.state.activeWorkspace;
+    const user = this.state.currentUser;
+    const clients = this.state.clients;
+    const tasks = this.state.tasks;
 
     appEl.innerHTML = `
       <div class="app-layout">
@@ -225,7 +494,7 @@ class WorkspaceApp {
             ${workspaceLogo(32)}
             <div class="sidebar-header-titles">
               <span class="sidebar-app-name">Operations</span>
-              <span class="sidebar-workspace-name">Workspace</span>
+              <span class="sidebar-workspace-name">${this.escapeHtml(ws.name)}</span>
             </div>
           </div>
 
@@ -238,35 +507,44 @@ class WorkspaceApp {
             <button class="nav-link ${this.state.currentView === 'tasks' ? 'active' : ''}" data-nav="tasks">
               ${icon('tasks', 18)}
               <span class="nav-link-label">Tasks</span>
-              <span class="nav-badge">${this.state.tasks.length}</span>
+              <span class="nav-badge">${tasks.length}</span>
             </button>
 
             <button class="nav-link ${this.state.currentView === 'clients' ? 'active' : ''}" data-nav="clients">
               ${icon('clients', 18)}
               <span class="nav-link-label">Clients</span>
-              <span class="nav-badge">${visibleClients.length}</span>
+              <span class="nav-badge">${clients.length}</span>
             </button>
           </nav>
 
           <div class="sidebar-footer">
-            <label class="sidebar-footer-label" for="viewing-as-select">VIEWING AS</label>
-            <select id="viewing-as-select" class="viewing-as-select">
-              ${this.state.teamMembers.map(m => `
-                <option value="${m.id}" ${this.state.viewAs === m.id ? 'selected' : ''}>
-                  ${m.name} · ${m.role}
-                </option>
-              `).join('')}
-            </select>
+            <label class="sidebar-footer-label">Logged In User</label>
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+              <span style="width:28px;height:28px;border-radius:50%;background:#4F46E5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">
+                ${user.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
+              </span>
+              <div style="flex:1;min-width:0;line-height:1.2">
+                <div style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${user.name}</div>
+                <div style="font-size:11px;color:#94A3B8">${user.role}</div>
+              </div>
+            </div>
 
-            <button id="sidebar-add-member-btn" class="chip" style="width:100%;height:32px;justify-content:center;margin-top:4px;border-color:#334155;background:#1E293B;color:#F8FAFC;font-size:11.5px;cursor:pointer">
+            <!-- Viewing as selector if multiple members exist -->
+            ${this.state.teamMembers.length > 1 ? `
+              <label class="sidebar-footer-label" style="margin-top:4px">SWITCH ROLE / VIEW</label>
+              <select id="switch-user-select" class="viewing-as-select">
+                ${this.state.teamMembers.map(m => `
+                  <option value="${m.id}" ${user.id === m.id ? 'selected' : ''}>${m.name} (${m.role})</option>
+                `).join('')}
+              </select>
+            ` : ''}
+
+            <button id="sidebar-add-member-btn" class="sidebar-action-btn">
               ${icon('plus', 14)}
-              <span>Add New User / ID</span>
+              <span>+ Add Team Member ID</span>
             </button>
 
-            <span class="sidebar-footer-caption">
-              Access is enforced per person, per client.
-            </span>
-            <button id="logout-btn" class="logout-btn" title="Sign out of current account">
+            <button id="logout-btn" class="logout-btn">
               ${icon('logout', 14)}
               Log out
             </button>
@@ -279,16 +557,16 @@ class WorkspaceApp {
           <header class="app-header">
             <div class="header-left">
               <div style="display:flex;align-items:center;gap:10px">
-                <span class="header-breadcrumb">Overview</span>
+                <span class="header-breadcrumb">${this.escapeHtml(ws.name)}</span>
                 ${this.state.cloudConnected ? `
                   <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#ECFDF5;color:#059669;display:inline-flex;align-items:center;gap:4px">
                     <span style="width:6px;height:6px;border-radius:50%;background:#10B981"></span>
-                    Cloud Database
+                    Cloud Multi-Tenant
                   </span>
                 ` : `
-                  <span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:#F1F5F9;color:#64748B;display:inline-flex;align-items:center;gap:4px" title="Configure VITE_SUPABASE_URL in .env or Vercel">
+                  <span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:#F1F5F9;color:#64748B;display:inline-flex;align-items:center;gap:4px">
                     <span style="width:6px;height:6px;border-radius:50%;background:#94A3B8"></span>
-                    Local Store
+                    Local Workspace
                   </span>
                 `}
               </div>
@@ -298,41 +576,44 @@ class WorkspaceApp {
             <div class="header-right">
               <div class="search-bar">
                 ${icon('search', 16)}
-                <input
-                  id="search-input"
-                  type="text"
-                  placeholder="Search clients and team"
-                  value="${this.escapeHtml(this.state.searchQuery)}"
-                />
+                <input id="search-input" type="text" placeholder="Search clients and tasks..." value="${this.escapeHtml(this.state.searchQuery)}" />
               </div>
-              <button id="add-btn" class="add-btn">
-                ${icon('plus', 16)}
-                <span>Add</span>
+
+              <button id="header-add-client-btn" class="outline-btn">
+                ${icon('plus', 14)}
+                <span>Client</span>
+              </button>
+
+              <button id="header-add-task-btn" class="add-btn">
+                ${icon('plus', 14)}
+                <span>Task</span>
               </button>
             </div>
           </header>
 
           <!-- PAGE BODY -->
           <div class="page-body">
-            <!-- BANNER 1: RESTRICTION BANNER -->
-            ${!isFounder ? `
-              <div class="dark-restriction-banner">
-                <span>Viewing as ${user.name}. ${visibleClients.length} of ${CLIENTS.length} clients visible, finance on 0.</span>
-                <button id="back-to-founder-btn" class="back-to-founder-btn">
-                  Back to founder view
+            <!-- WORKSPACE ONBOARDING & DATA CONTROLS BAR -->
+            <div class="workspace-onboarding-bar">
+              <div class="workspace-onboarding-bar-left">
+                <span>Workspace: <strong>${this.escapeHtml(ws.name)}</strong> · ${clients.length} Clients · ${tasks.length} Tasks</span>
+              </div>
+              <div class="workspace-onboarding-bar-right">
+                <button id="load-sample-btn" class="small-btn">
+                  ⚡ Load Sample Demo Data
                 </button>
+                ${(clients.length > 0 || tasks.length > 0) ? `
+                  <button id="clear-data-btn" class="small-btn danger">
+                    🗑️ Clear All Data
+                  </button>
+                ` : ''}
               </div>
+            </div>
 
-              <!-- BANNER 2: VIEW ONLY BLUE NOTICE -->
-              <div class="blue-info-banner">
-                <span>View only. You can see Dashboard but can't add or change anything here.</span>
-              </div>
-            ` : ''}
-
-            <!-- RENDER ACTIVE VIEW -->
-            ${this.state.currentView === 'dashboard' ? this.renderDashboard(visibleTasks) : ''}
-            ${this.state.currentView === 'tasks' ? this.renderTasksView(visibleTasks) : ''}
-            ${this.state.currentView === 'clients' ? this.renderClientsView(visibleClients) : ''}
+            <!-- ACTIVE VIEW CONTENT -->
+            ${this.state.currentView === 'dashboard' ? this.renderDashboard() : ''}
+            ${this.state.currentView === 'tasks' ? this.renderTasksView() : ''}
+            ${this.state.currentView === 'clients' ? this.renderClientsView() : ''}
           </div>
         </main>
 
@@ -342,106 +623,125 @@ class WorkspaceApp {
       </div>
     `;
 
-    this.attachEvents();
+    this.attachWorkspaceEvents();
   }
 
-  renderLoginPage() {
+  // ========================================================
+  // AUTHENTICATION & MULTI-TENANT SIGNUP SCREEN
+  // ========================================================
+  renderAuthScreen() {
+    const allWs = getWorkspaces();
+
     return `
       <div class="login-page-container">
         <div class="login-card">
           <div class="login-card-header">
             ${workspaceLogo(48)}
             <h1 class="login-title">Operations Workspace</h1>
-            <p class="login-subtitle">Nayi ID banayein ya existing profile se sign in karein.</p>
+            <p class="login-subtitle">Multi-Tenant Platform. Apna naya workspace banayein ya existing ID se login karein.</p>
           </div>
 
           <div class="login-tabs">
-            <button class="login-tab-btn ${this.state.loginTab === 'signup' ? 'active' : ''}" data-login-tab="signup">
-              + Create New ID (Sign Up)
+            <button class="login-tab-btn ${this.state.authTab === 'signup' ? 'active' : ''}" data-auth-tab="signup">
+              + Register New Workspace (Nayi ID)
             </button>
-            <button class="login-tab-btn ${this.state.loginTab === 'profiles' ? 'active' : ''}" data-login-tab="profiles">
-              Team Profiles (1-Click)
-            </button>
-            <button class="login-tab-btn ${this.state.loginTab === 'email' ? 'active' : ''}" data-login-tab="email">
-              Sign In with Email
+            <button class="login-tab-btn ${this.state.authTab === 'signin' ? 'active' : ''}" data-auth-tab="signin">
+              Sign In (Existing User)
             </button>
           </div>
 
-          <!-- TAB 1: SIGN UP (CREATE NEW ID) -->
-          ${this.state.loginTab === 'signup' ? `
-            <form id="signup-form" class="login-form-box">
+          <!-- TAB 1: REGISTER NEW TENANT / WORKSPACE -->
+          ${this.state.authTab === 'signup' ? `
+            <form id="register-tenant-form" class="login-form-box">
               <label class="login-form-group">
-                Full Name (Pura Naam)
-                <input id="signup-name" type="text" class="login-input" placeholder="e.g. Sameer Thakur" required />
+                Company / Agency Workspace Name
+                <input id="reg-ws-name" type="text" class="login-input" placeholder="e.g. Thakur Operations / Acme Media" required />
+              </label>
+
+              <label class="login-form-group">
+                Your Full Name (Pura Naam)
+                <input id="reg-full-name" type="text" class="login-input" placeholder="e.g. Sameer Thakur" required />
               </label>
 
               <label class="login-form-group">
                 Email Address
-                <input id="signup-email" type="email" class="login-input" placeholder="e.g. sameer@workspace.com" required />
+                <input id="reg-email" type="email" class="login-input" placeholder="e.g. sameer@mycompany.com" required />
               </label>
 
               <label class="login-form-group">
-                Workspace Role & Permission
-                <select id="signup-role" class="login-input" style="background:#fff;cursor:pointer">
-                  <option value="Owner & Founder">Owner & Founder (Full access to all 5 clients)</option>
-                  <option value="Operations lead">Operations lead (Manage tasks & all clients)</option>
-                  <option value="Designer">Designer (Design clients: ARC3, Meridian, Oakline)</option>
-                  <option value="Developer">Developer (Tech clients: Sahyadri, Oakline, Lumen)</option>
-                  <option value="Finance lead">Finance lead (All client finances & reports)</option>
-                  <option value="Team member" selected>Team member (Standard member view)</option>
+                Account Role
+                <select id="reg-role" class="login-input" style="cursor:pointer">
+                  <option value="Owner & Founder" selected>Owner & Founder (Full control over all clients & team)</option>
+                  <option value="Operations lead">Operations lead</option>
+                  <option value="Team member">Team member</option>
                 </select>
               </label>
 
               <label class="login-form-group">
-                Create Password
-                <input id="signup-password" type="password" class="login-input" placeholder="Choose a password" required value="workspace123" />
-              </label>
-
-              <button type="submit" class="login-submit-btn" style="background:#10B981">
-                + Create ID & Enter Workspace (Nayi ID Banayein)
-              </button>
-            </form>
-          ` : ''}
-
-          <!-- TAB 2: PROFILES SELECTOR -->
-          ${this.state.loginTab === 'profiles' ? `
-            <div class="user-profiles-grid">
-              ${this.state.teamMembers.map(m => {
-                const isF = m.isFounder;
-                const initials = m.name.split(' ').map(w => w[0]).slice(0, 2).join('');
-                return `
-                  <button class="user-profile-select-btn" data-login-user="${m.id}">
-                    <div class="user-avatar-circle ${isF ? 'founder' : ''}">
-                      ${initials}
-                    </div>
-                    <div class="user-info-meta">
-                      <span class="user-info-name">${m.name}</span>
-                      <span class="user-info-role">${m.role}</span>
-                      <span class="user-access-tag">${isF ? '5 clients (Full Access)' : (m.allowedClients.length ? `${m.allowedClients.length} clients visible` : 'View only (0 clients)')}</span>
-                    </div>
-                  </button>
-                `;
-              }).join('')}
-            </div>
-          ` : ''}
-
-          <!-- TAB 3: EMAIL & PASSWORD LOGIN -->
-          ${this.state.loginTab === 'email' ? `
-            <form id="email-login-form" class="login-form-box">
-              <label class="login-form-group">
-                Registered Email Address
-                <input id="login-email" type="email" class="login-input" placeholder="e.g. rakesh@workspace.com" required value="rakesh@workspace.com" />
-              </label>
-
-              <label class="login-form-group">
-                Password
-                <input id="login-password" type="password" class="login-input" placeholder="••••••••" required value="workspace123" />
+                Set Password
+                <input id="reg-password" type="password" class="login-input" placeholder="Choose a password" required value="workspace123" />
               </label>
 
               <button type="submit" class="login-submit-btn">
-                Sign In to Workspace
+                <span>+ Create My Workspace & Launch Dashboard</span>
               </button>
             </form>
+          ` : ''}
+
+          <!-- TAB 2: SIGN IN TO EXISTING WORKSPACE -->
+          ${this.state.authTab === 'signin' ? `
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <form id="email-signin-form" class="login-form-box" style="margin-bottom:0">
+                <label class="login-form-group">
+                  Your Account Email
+                  <input id="signin-email" type="email" class="login-input" placeholder="e.g. sameer@mycompany.com" required />
+                </label>
+
+                <label class="login-form-group">
+                  Password
+                  <input id="signin-password" type="password" class="login-input" placeholder="Enter your password" required />
+                </label>
+
+                <button type="submit" class="login-submit-btn">
+                  <span>Sign In to Workspace</span>
+                </button>
+              </form>
+
+              <div style="position:relative;text-align:center;margin:4px 0">
+                <div style="position:absolute;top:50%;left:0;right:0;border-top:1px solid #E2E8F0"></div>
+                <span style="position:relative;background:#fff;padding:0 10px;font-size:11px;font-weight:700;color:#94A3B8;letter-spacing:0.5px">
+                  OR QUICK SELECT SAVED WORKSPACE
+                </span>
+              </div>
+
+              ${allWs.length ? `
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  ${allWs.map(w => {
+                    const owner = (w.teamMembers || [])[0];
+                    return `
+                      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:8px;border:1px solid #E2E8F0;background:#F8FAFC">
+                        <div style="min-width:0;flex:1">
+                          <div style="font-weight:700;font-size:14px;color:#0F172A">${this.escapeHtml(w.name)}</div>
+                          <div style="font-size:12px;color:#64748B">${(w.teamMembers || []).length} team member(s) · ${(w.clients || []).length} client(s)</div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px">
+                          <button class="small-btn signin-ws-btn" data-ws-id="${w.id}" data-user-id="${owner ? owner.id : ''}" style="background:#4F46E5;color:#fff;border-color:#4F46E5">
+                            Open
+                          </button>
+                          <button class="small-btn danger delete-ws-btn" data-ws-id="${w.id}" title="Delete workspace from browser" style="padding:4px 8px">
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              ` : `
+                <div style="padding:14px;text-align:center;color:#64748B;font-size:12.5px;background:#F8FAFC;border-radius:8px;border:1px dashed #CBD5E1">
+                  Is browser me koi saved workspace nahi hai. Nayi ID banane ke liye upar <strong>+ Register New Workspace</strong> click karein!
+                </div>
+              `}
+            </div>
           ` : ''}
         </div>
 
@@ -450,65 +750,99 @@ class WorkspaceApp {
     `;
   }
 
-  attachLoginEvents() {
-    // Tab switching
-    document.querySelectorAll('[data-login-tab]').forEach(btn => {
+  attachAuthEvents() {
+    document.querySelectorAll('[data-auth-tab]').forEach(btn => {
       btn.addEventListener('click', () => {
-        this.setState({ loginTab: btn.getAttribute('data-login-tab') });
+        this.setState({ authTab: btn.getAttribute('data-auth-tab') });
       });
     });
 
-    // Profile card click to login
-    document.querySelectorAll('[data-login-user]').forEach(btn => {
+    const regForm = document.getElementById('register-tenant-form');
+    if (regForm) {
+      regForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const companyName = document.getElementById('reg-ws-name')?.value.trim();
+        const fullName = document.getElementById('reg-full-name')?.value.trim();
+        const email = document.getElementById('reg-email')?.value.trim().toLowerCase();
+        const role = document.getElementById('reg-role')?.value;
+        const password = document.getElementById('reg-password')?.value;
+
+        if (!companyName || !fullName || !email) return;
+
+        await this.registerNewTenant({ companyName, fullName, email, password, role });
+      });
+    }
+
+    const emailSigninForm = document.getElementById('email-signin-form');
+    if (emailSigninForm) {
+      emailSigninForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('signin-email')?.value.trim();
+        const password = document.getElementById('signin-password')?.value;
+        await this.loginWithEmail(email, password);
+      });
+    }
+
+    document.querySelectorAll('.signin-ws-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const userId = btn.getAttribute('data-login-user');
-        this.login(userId);
+        const wsId = btn.getAttribute('data-ws-id');
+        const userId = btn.getAttribute('data-user-id');
+        this.loginUser(wsId, userId);
       });
     });
 
-    // Sign up form
-    const signupForm = document.getElementById('signup-form');
-    if (signupForm) {
-      signupForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = document.getElementById('signup-name')?.value.trim();
-        const email = document.getElementById('signup-email')?.value.trim().toLowerCase();
-        const role = document.getElementById('signup-role')?.value;
-        const password = document.getElementById('signup-password')?.value;
-
-        if (!name || !email) return;
-
-        // Check if email already registered
-        const existing = this.state.teamMembers.find(m => m.email && m.email.toLowerCase() === email);
-        if (existing) {
-          this.toast('Yeh email pehle se registered hai! Signing in...');
-          this.login(existing.id);
-          return;
-        }
-
-        await this.createNewMember({ name, email, role, password });
+    document.querySelectorAll('.delete-ws-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const wsId = btn.getAttribute('data-ws-id');
+        this.deleteWorkspaceEntry(wsId);
       });
-    }
-
-    // Email login form
-    const emailForm = document.getElementById('email-login-form');
-    if (emailForm) {
-      emailForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const email = document.getElementById('login-email')?.value.trim().toLowerCase();
-        const matched = this.state.teamMembers.find(m => m.email && m.email.toLowerCase() === email);
-        if (matched) {
-          this.login(matched.id);
-        } else {
-          // If not matched, automatically create ID or inform
-          this.toast('Email not found. Nayi ID banane ke liye Create New ID tab use karein.');
-          this.setState({ loginTab: 'signup' });
-        }
-      });
-    }
+    });
   }
 
-  renderDashboard(visibleTasks) {
+  // ========================================================
+  // DASHBOARD VIEW
+  // ========================================================
+  renderDashboard() {
+    const clients = this.state.clients;
+    const tasks = this.state.tasks;
+
+    // If completely empty workspace, render Onboarding Empty State
+    if (!clients.length && !tasks.length) {
+      return `
+        <div class="empty-state-box">
+          <div class="empty-state-icon">
+            ${icon('dashboard', 26)}
+          </div>
+          <h2 class="empty-state-title">Welcome to your clean Workspace!</h2>
+          <p class="empty-state-desc">
+            Aapka workspace abhi bilkul fresh hai — isme koi purana ya demo data nahi hai. Aap apna pehla Client ya Task add karke shuruat kar sakte hain.
+          </p>
+          <div class="empty-state-actions">
+            <button id="empty-add-client-btn" class="add-btn">
+              ${icon('plus', 16)}
+              <span>+ Add Your First Client</span>
+            </button>
+            <button id="empty-add-task-btn" class="outline-btn">
+              ${icon('plus', 16)}
+              <span>+ Add First Task</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Filter tasks
+    let visibleTasks = tasks;
+    if (this.state.selectedAssignee !== 'all') {
+      visibleTasks = visibleTasks.filter(t => t.assignee === this.state.selectedAssignee);
+    }
+    if (this.state.selectedBrand !== 'all') {
+      visibleTasks = visibleTasks.filter(t => {
+        const c = clients.find(cl => cl.id === t.client);
+        return c && c.brand === this.state.selectedBrand;
+      });
+    }
+
     const statusCounts = {
       total: visibleTasks.length,
       not_started: visibleTasks.filter(t => t.status === 'not_started').length,
@@ -520,13 +854,10 @@ class WorkspaceApp {
     };
 
     return `
-      <!-- STATUS CARDS ROW -->
+      <!-- STATUS METRICS ROW -->
       <div class="status-cards-row">
         ${STATUS_LIST.map(st => `
-          <div
-            class="status-metric-card ${this.state.activeStatusFilter === st.id ? 'active' : ''}"
-            data-status-filter="${st.id}"
-          >
+          <div class="status-metric-card ${this.state.activeStatusFilter === st.id ? 'active' : ''}" data-status-filter="${st.id}">
             <span class="status-metric-num">${statusCounts[st.id] ?? 0}</span>
             <span class="status-metric-label">${st.label}</span>
           </div>
@@ -536,13 +867,9 @@ class WorkspaceApp {
       <!-- CALENDAR CONTROLS BAR -->
       <div class="calendar-controls-bar">
         <div class="calendar-nav-left">
-          <button id="prev-month-btn" class="icon-nav-btn" aria-label="Previous month">
-            ${icon('chevron-left', 16)}
-          </button>
+          <button class="icon-nav-btn">${icon('chevron-left', 16)}</button>
           <div class="month-badge">October 2026</div>
-          <button id="next-month-btn" class="icon-nav-btn" aria-label="Next month">
-            ${icon('chevron-right', 16)}
-          </button>
+          <button class="icon-nav-btn">${icon('chevron-right', 16)}</button>
           <button id="today-btn" class="today-btn">Today</button>
         </div>
 
@@ -585,22 +912,18 @@ class WorkspaceApp {
     const cells = [];
 
     // Pre-month days: Sep 28, 29, 30
-    const prevDays = [28, 29, 30];
-    prevDays.forEach(d => {
+    [28, 29, 30].forEach(d => {
       cells.push(`
         <div class="calendar-cell out-of-month">
-          <div class="calendar-cell-top">
-            <span class="calendar-day-number">${d}</span>
-          </div>
+          <div class="calendar-cell-top"><span class="calendar-day-number">${d}</span></div>
         </div>
       `);
     });
 
-    // October days 1 to 31
     for (let day = 1; day <= 31; day++) {
       const dateStr = `2026-10-${String(day).padStart(2, '0')}`;
       const holiday = HOLIDAYS_2026_OCT[dateStr];
-      const isCurrentHighlight = day === 1;
+      const isToday = day === 1;
 
       let dayTasks = visibleTasks.filter(t => t.date === dateStr);
       if (this.state.activeStatusFilter !== 'total') {
@@ -608,139 +931,285 @@ class WorkspaceApp {
       }
 
       cells.push(`
-        <div class="calendar-cell ${isCurrentHighlight ? 'current-highlight' : ''}" data-day="${dateStr}">
+        <div class="calendar-cell ${isToday ? 'current-highlight' : ''}" data-day="${dateStr}">
           <div class="calendar-cell-top">
             <span class="calendar-day-number">${day}</span>
           </div>
-
           ${holiday ? `<span class="holiday-tag">${holiday}</span>` : ''}
-
           ${dayTasks.map(t => `
-            <div class="task-pill ${isCurrentHighlight ? 'in-highlight-cell' : ''}" data-task-id="${t.id}">
+            <div class="task-pill" data-task-id="${t.id}" title="${t.title}">
               <span>&#x25A2;</span>
-              <span>1 task</span>
+              <span>${t.title}</span>
             </div>
           `).join('')}
         </div>
       `);
     }
 
-    // Trailing days of November
     cells.push(`
       <div class="calendar-cell out-of-month">
-        <div class="calendar-cell-top">
-          <span class="calendar-day-number">1</span>
-        </div>
+        <div class="calendar-cell-top"><span class="calendar-day-number">1</span></div>
       </div>
     `);
 
     return cells.join('');
   }
 
-  renderTasksView(visibleTasks) {
+  // ========================================================
+  // TASKS VIEW
+  // ========================================================
+  renderTasksView() {
+    const clients = this.state.clients;
+    const tasks = this.state.tasks;
+
+    if (!tasks.length) {
+      return `
+        <div class="empty-state-box">
+          <div class="empty-state-icon">${icon('tasks', 26)}</div>
+          <h2 class="empty-state-title">No tasks found</h2>
+          <p class="empty-state-desc">Aapke workspace me koi task nahi hai. Naya task create karne ke liye button par click karein.</p>
+          <button id="view-add-task-btn" class="add-btn">+ Add New Task</button>
+        </div>
+      `;
+    }
+
     return `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <span style="font-size:14px;color:var(--text-muted)">Showing ${visibleTasks.length} active tasks</span>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13.5px;color:var(--text-muted)">Total ${tasks.length} tasks scheduled</span>
+        <button id="view-add-task-btn" class="add-btn">+ Add Task</button>
       </div>
 
-      <div class="tasks-container">
-        ${visibleTasks.map(t => {
-          const client = getClient(t.client);
-          const assignee = getMember(t.assignee) || this.state.teamMembers.find(m => m.id === t.assignee);
+      <div class="cards-grid-layout">
+        ${tasks.map(t => {
+          const client = clients.find(c => c.id === t.client);
+          const assignee = this.state.teamMembers.find(m => m.id === t.assignee);
           const st = STATUS_LIST.find(s => s.id === t.status) || STATUS_LIST[1];
 
           return `
-            <div class="task-card-item" data-task-id="${t.id}">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                <span style="font-weight:700;font-size:15px">${t.title}</span>
-                <span class="task-status-badge" style="background:${st.bg};color:${st.color};border:1px solid ${st.border}">
-                  ${st.label}
-                </span>
+            <div class="card-item" data-task-id="${t.id}">
+              <div class="card-item-top">
+                <span style="font-weight:700;font-size:15px;color:#0F172A">${t.title}</span>
+                <button class="delete-icon-btn delete-task-btn" data-task-id="${t.id}" title="Delete task">
+                  ${icon('close', 16)}
+                </button>
               </div>
-              <p style="font-size:13px;color:var(--text-muted);line-height:1.4">${t.description}</p>
+
+              <div>
+                <span class="task-status-badge" style="background:${st.bg};color:${st.color};border:1px solid ${st.border}">${st.label}</span>
+              </div>
+
+              <p style="font-size:13px;color:var(--text-muted);line-height:1.4">${t.description || 'No description'}</p>
+
               <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted);border-top:1px solid #F1F5F9;padding-top:10px">
-                <span>Client: <strong>${client?.name || 'N/A'}</strong></span>
-                <span>Assignee: <strong>${assignee?.name || 'Unassigned'}</strong></span>
+                <span>Client: <strong>${client ? client.name : 'N/A'}</strong></span>
+                <span>Assignee: <strong>${assignee ? assignee.name : 'Unassigned'}</strong></span>
                 <span>Date: ${t.date}</span>
               </div>
             </div>
           `;
         }).join('')}
-        ${!visibleTasks.length ? `<div style="padding:40px;color:var(--text-muted)">No tasks match the selected criteria.</div>` : ''}
       </div>
     `;
   }
 
-  renderClientsView(visibleClients) {
+  // ========================================================
+  // CLIENTS VIEW
+  // ========================================================
+  renderClientsView() {
+    const clients = this.state.clients;
+
+    if (!clients.length) {
+      return `
+        <div class="empty-state-box">
+          <div class="empty-state-icon">${icon('clients', 26)}</div>
+          <h2 class="empty-state-title">No clients in this workspace</h2>
+          <p class="empty-state-desc">Abhi koi client add nahi hua hai. Apna pehla client register karein.</p>
+          <button id="view-add-client-btn" class="add-btn">+ Add Client</button>
+        </div>
+      `;
+    }
+
     return `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <span style="font-size:14px;color:var(--text-muted)">Showing ${visibleClients.length} clients</span>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13.5px;color:var(--text-muted)">Total ${clients.length} active clients</span>
+        <button id="view-add-client-btn" class="add-btn">+ Add Client</button>
       </div>
 
-      <div class="clients-grid">
-        ${visibleClients.map(c => `
-          <div class="client-card-item">
-            <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="cards-grid-layout">
+        ${clients.map(c => `
+          <div class="card-item">
+            <div class="card-item-top">
               <span style="font-weight:700;font-size:16px">${c.name}</span>
-              <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:#F1F5F9;color:#334155">${c.status}</span>
+              <button class="delete-icon-btn delete-client-btn" data-client-id="${c.id}" title="Delete client">
+                ${icon('close', 16)}
+              </button>
             </div>
-            <div style="font-size:13px;color:var(--text-muted)">
-              <div>Contact: <strong>${c.contact}</strong></div>
-              <div style="margin-top:4px">Monthly Retainer: <strong>₹${c.retainer.toLocaleString('en-IN')}</strong></div>
-              <div style="margin-top:4px">Member since: ${c.since}</div>
+
+            <div style="font-size:13px;color:var(--text-muted);display:flex;flex-direction:column;gap:4px">
+              <div>Contact Person: <strong>${c.contact || 'N/A'}</strong></div>
+              <div>Monthly Retainer: <strong>₹${Number(c.retainer).toLocaleString('en-IN')}</strong></div>
+              <div>Category: <strong>${c.brand}</strong></div>
+              <div>Since: ${c.since}</div>
             </div>
           </div>
         `).join('')}
-        ${!visibleClients.length ? `<div style="padding:40px;color:var(--text-muted)">No clients visible to your current role.</div>` : ''}
       </div>
     `;
   }
 
+  // ========================================================
+  // MODALS
+  // ========================================================
   renderModal() {
-    if (this.state.modalType === 'addMember') {
+    // 1. ADD CLIENT MODAL
+    if (this.state.modalType === 'addClient') {
       return `
         <div class="modal-overlay" id="modal-overlay">
-          <form class="modal-content" id="add-member-modal-form">
+          <form class="modal-content" id="add-client-form">
             <div class="modal-header">
-              <h2 class="modal-title">+ Add New Team ID</h2>
+              <h2 class="modal-title">+ Add Client to Workspace</h2>
               <button type="button" id="modal-close-btn" class="modal-close-btn">${icon('close', 18)}</button>
             </div>
 
             <label class="modal-form-group">
-              Full Name (Pura Naam)
-              <input name="name" class="modal-input" placeholder="e.g. Sameer Thakur" required />
+              Client / Company Name
+              <input name="name" class="modal-input" placeholder="e.g. Reliance Retail / Tata Sons" required />
             </label>
 
             <label class="modal-form-group">
-              Email Address
-              <input name="email" type="email" class="modal-input" placeholder="e.g. sameer@workspace.com" required />
-            </label>
-
-            <label class="modal-form-group">
-              Role & Permission
-              <select name="role" class="modal-select">
-                <option value="Owner & Founder">Owner & Founder (Full access to all 5 clients)</option>
-                <option value="Operations lead">Operations lead (Manage tasks & all clients)</option>
-                <option value="Designer">Designer (Design clients: ARC3, Meridian, Oakline)</option>
-                <option value="Developer">Developer (Tech clients: Sahyadri, Oakline, Lumen)</option>
-                <option value="Finance lead">Finance lead (All client finances & reports)</option>
-                <option value="Team member" selected>Team member (Standard member view)</option>
+              Brand / Category
+              <select name="brand" class="modal-select">
+                <option value="main">Primary Brand</option>
+                <option value="studio">Design Studio</option>
+                <option value="tech">Technology</option>
+                <option value="marketing">Marketing</option>
               </select>
+            </label>
+
+            <label class="modal-form-group">
+              Monthly Retainer (₹)
+              <input name="retainer" type="number" class="modal-input" placeholder="e.g. 150000" required />
+            </label>
+
+            <label class="modal-form-group">
+              Primary Contact Person
+              <input name="contact" class="modal-input" placeholder="e.g. Rajesh Sharma" required />
             </label>
 
             <div class="modal-actions">
               <button type="button" id="modal-cancel-btn" class="today-btn">Cancel</button>
-              <button type="submit" class="add-btn" style="height:38px;background:#10B981">Create Member ID</button>
+              <button type="submit" class="add-btn">Save Client</button>
             </div>
           </form>
         </div>
       `;
     }
 
+    // 2. ADD TASK MODAL
+    if (this.state.modalType === 'addTask') {
+      return `
+        <div class="modal-overlay" id="modal-overlay">
+          <form class="modal-content" id="add-task-form">
+            <div class="modal-header">
+              <h2 class="modal-title">+ Create New Task</h2>
+              <button type="button" id="modal-close-btn" class="modal-close-btn">${icon('close', 18)}</button>
+            </div>
+
+            <label class="modal-form-group">
+              Task Title
+              <input name="title" class="modal-input" placeholder="e.g. Website re-design sprint 1" required />
+            </label>
+
+            <label class="modal-form-group">
+              Client
+              <select name="client" class="modal-select">
+                ${this.state.clients.length ? `
+                  ${this.state.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+                ` : `<option value="">No clients (General Task)</option>`}
+              </select>
+            </label>
+
+            <label class="modal-form-group">
+              Assignee
+              <select name="assignee" class="modal-select">
+                ${this.state.teamMembers.map(m => `<option value="${m.id}">${m.name} (${m.role})</option>`).join('')}
+              </select>
+            </label>
+
+            <label class="modal-form-group">
+              Due Date
+              <input name="date" type="date" class="modal-input" value="2026-10-01" required />
+            </label>
+
+            <label class="modal-form-group">
+              Estimated Hours
+              <input name="hours" type="number" class="modal-input" value="8" />
+            </label>
+
+            <label class="modal-form-group">
+              Description
+              <textarea name="description" class="modal-input" style="height:60px;padding:8px" placeholder="Task details and instructions"></textarea>
+            </label>
+
+            <div class="modal-actions">
+              <button type="button" id="modal-cancel-btn" class="today-btn">Cancel</button>
+              <button type="submit" class="add-btn">Create Task</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    // 3. ADD TEAM MEMBER MODAL
+    if (this.state.modalType === 'addMember') {
+      return `
+        <div class="modal-overlay" id="modal-overlay">
+          <form class="modal-content" id="add-member-form">
+            <div class="modal-header">
+              <h2 class="modal-title">+ Add Team Member ID</h2>
+              <button type="button" id="modal-close-btn" class="modal-close-btn">${icon('close', 18)}</button>
+            </div>
+
+            <label class="modal-form-group">
+              Full Name (Pura Naam)
+              <input name="name" class="modal-input" placeholder="e.g. Rohit Verma" required />
+            </label>
+
+            <label class="modal-form-group">
+              Email Address
+              <input name="email" type="email" class="modal-input" placeholder="e.g. rohit@workspace.com" required />
+            </label>
+
+            <label class="modal-form-group">
+              Login Password
+              <input name="password" type="password" class="modal-input" placeholder="Set member login password" value="workspace123" required />
+            </label>
+
+            <label class="modal-form-group">
+              Role & Access Level
+              <select name="role" class="modal-select">
+                <option value="Operations lead">Operations lead (Manage tasks & clients)</option>
+                <option value="Designer">Designer</option>
+                <option value="Developer">Developer</option>
+                <option value="Finance lead">Finance lead</option>
+                <option value="Team member" selected>Team member (Standard access)</option>
+              </select>
+            </label>
+
+            <div class="modal-actions">
+              <button type="button" id="modal-cancel-btn" class="today-btn">Cancel</button>
+              <button type="submit" class="add-btn">Add Member</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    // 4. TASK DETAIL MODAL
     if (this.state.modalType === 'taskDetail' && this.state.selectedTask) {
       const t = this.state.selectedTask;
-      const client = getClient(t.client);
-      const assignee = getMember(t.assignee) || this.state.teamMembers.find(m => m.id === t.assignee);
+      const client = this.state.clients.find(c => c.id === t.client);
+      const assignee = this.state.teamMembers.find(m => m.id === t.assignee);
       const st = STATUS_LIST.find(s => s.id === t.status) || STATUS_LIST[1];
 
       return `
@@ -750,21 +1219,26 @@ class WorkspaceApp {
               <h2 class="modal-title">${t.title}</h2>
               <button id="modal-close-btn" class="modal-close-btn">${icon('close', 18)}</button>
             </div>
+
             <div style="display:flex;flex-direction:column;gap:12px;font-size:13.5px">
               <div>
                 <span class="task-status-badge" style="background:${st.bg};color:${st.color};border:1px solid ${st.border}">
                   ${st.label}
                 </span>
               </div>
-              <p style="color:var(--text-muted);line-height:1.5">${t.description}</p>
+
+              <p style="color:var(--text-muted);line-height:1.5">${t.description || 'No description provided.'}</p>
+
               <div style="display:flex;flex-direction:column;gap:6px;background:#F8FAFC;padding:12px;border-radius:8px">
-                <div>Client: <strong>${client?.name || 'N/A'}</strong></div>
-                <div>Assignee: <strong>${assignee?.name || 'Unassigned'}</strong></div>
-                <div>Scheduled Date: <strong>${t.date}</strong></div>
-                <div>Estimated hours: <strong>${t.hours}h</strong></div>
+                <div>Client: <strong>${client ? client.name : 'N/A'}</strong></div>
+                <div>Assignee: <strong>${assignee ? assignee.name : 'Unassigned'}</strong></div>
+                <div>Due Date: <strong>${t.date}</strong></div>
+                <div>Logged hours: <strong>${t.hours}h</strong></div>
               </div>
             </div>
-            <div class="modal-actions">
+
+            <div class="modal-actions" style="justify-content:space-between">
+              <button id="detail-delete-task-btn" class="small-btn danger">Delete Task</button>
               <button id="modal-done-btn" class="add-btn" style="height:36px">Close</button>
             </div>
           </div>
@@ -772,73 +1246,35 @@ class WorkspaceApp {
       `;
     }
 
-    // Default: Add Task Modal
-    return `
-      <div class="modal-overlay" id="modal-overlay">
-        <form class="modal-content" id="new-task-form">
-          <div class="modal-header">
-            <h2 class="modal-title">New Task</h2>
-            <button type="button" id="modal-close-btn" class="modal-close-btn">${icon('close', 18)}</button>
-          </div>
-
-          <label class="modal-form-group">
-            Task Title
-            <input name="title" class="modal-input" placeholder="e.g. Q4 campaign concepts" required />
-          </label>
-
-          <label class="modal-form-group">
-            Client
-            <select name="client" class="modal-select" required>
-              ${this.state.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
-            </select>
-          </label>
-
-          <label class="modal-form-group">
-            Assignee
-            <select name="assignee" class="modal-select" required>
-              ${this.state.teamMembers.map(m => `<option value="${m.id}">${m.name} (${m.role})</option>`).join('')}
-            </select>
-          </label>
-
-          <label class="modal-form-group">
-            Due Date
-            <input name="date" type="date" class="modal-input" value="2026-10-01" required />
-          </label>
-
-          <div class="modal-actions">
-            <button type="button" id="modal-cancel-btn" class="today-btn">Cancel</button>
-            <button type="submit" class="add-btn" style="height:38px">Create Task</button>
-          </div>
-        </form>
-      </div>
-    `;
+    return '';
   }
 
-  attachEvents() {
-    // Navigation
+  // ========================================================
+  // WORKSPACE EVENT ATTACHMENT
+  // ========================================================
+  attachWorkspaceEvents() {
+    // Nav
     document.querySelectorAll('[data-nav]').forEach(btn => {
       btn.addEventListener('click', () => {
         this.setState({ currentView: btn.getAttribute('data-nav') });
       });
     });
 
-    // Viewing as selector
-    const viewingAsSelect = document.getElementById('viewing-as-select');
-    if (viewingAsSelect) {
-      viewingAsSelect.addEventListener('change', (e) => {
-        this.login(e.target.value);
+    // Switch Role dropdown
+    const switchUserSelect = document.getElementById('switch-user-select');
+    if (switchUserSelect) {
+      switchUserSelect.addEventListener('change', (e) => {
+        const uId = e.target.value;
+        const user = this.state.teamMembers.find(m => m.id === uId);
+        if (user) {
+          setSessionUserId(user.id);
+          this.setState({ currentUser: user });
+          this.toast(`Viewing workspace as ${user.name} (${user.role})`);
+        }
       });
     }
 
-    // Back to founder view
-    const backBtn = document.getElementById('back-to-founder-btn');
-    if (backBtn) {
-      backBtn.addEventListener('click', () => {
-        this.login('founder');
-      });
-    }
-
-    // Add Member button inside sidebar
+    // Add Member button in sidebar
     const addMemberBtn = document.getElementById('sidebar-add-member-btn');
     if (addMemberBtn) {
       addMemberBtn.addEventListener('click', () => {
@@ -846,11 +1282,55 @@ class WorkspaceApp {
       });
     }
 
-    // Logout button
+    // Logout
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', () => {
         this.logout();
+      });
+    }
+
+    // Header buttons
+    const headerAddClient = document.getElementById('header-add-client-btn');
+    if (headerAddClient) {
+      headerAddClient.addEventListener('click', () => {
+        this.setState({ modalOpen: true, modalType: 'addClient' });
+      });
+    }
+
+    const headerAddTask = document.getElementById('header-add-task-btn');
+    if (headerAddTask) {
+      headerAddTask.addEventListener('click', () => {
+        this.setState({ modalOpen: true, modalType: 'addTask' });
+      });
+    }
+
+    // Onboarding buttons
+    const emptyAddClient = document.getElementById('empty-add-client-btn') || document.getElementById('view-add-client-btn');
+    if (emptyAddClient) {
+      emptyAddClient.addEventListener('click', () => {
+        this.setState({ modalOpen: true, modalType: 'addClient' });
+      });
+    }
+
+    const emptyAddTask = document.getElementById('empty-add-task-btn') || document.getElementById('view-add-task-btn');
+    if (emptyAddTask) {
+      emptyAddTask.addEventListener('click', () => {
+        this.setState({ modalOpen: true, modalType: 'addTask' });
+      });
+    }
+
+    const loadSampleBtn = document.getElementById('load-sample-btn');
+    if (loadSampleBtn) {
+      loadSampleBtn.addEventListener('click', () => {
+        this.loadSampleDemoData();
+      });
+    }
+
+    const clearDataBtn = document.getElementById('clear-data-btn');
+    if (clearDataBtn) {
+      clearDataBtn.addEventListener('click', () => {
+        this.clearAllWorkspaceData();
       });
     }
 
@@ -862,23 +1342,10 @@ class WorkspaceApp {
       });
     }
 
-    // Add button
-    const addBtn = document.getElementById('add-btn');
-    if (addBtn) {
-      addBtn.addEventListener('click', () => {
-        if (!this.isFounder()) {
-          this.toast("View only. You don't have permission to create tasks.");
-          return;
-        }
-        this.setState({ modalOpen: true, modalType: 'addTask' });
-      });
-    }
-
     // Status filter cards
     document.querySelectorAll('[data-status-filter]').forEach(card => {
       card.addEventListener('click', () => {
-        const filter = card.getAttribute('data-status-filter');
-        this.setState({ activeStatusFilter: filter });
+        this.setState({ activeStatusFilter: card.getAttribute('data-status-filter') });
       });
     });
 
@@ -902,14 +1369,32 @@ class WorkspaceApp {
     if (todayBtn) {
       todayBtn.addEventListener('click', () => {
         this.setState({ activeStatusFilter: 'total', selectedAssignee: 'all', selectedBrand: 'all' });
-        this.toast('Reset to current month view.');
+        this.toast('Reset to default view.');
       });
     }
+
+    // Delete Client buttons
+    document.querySelectorAll('.delete-client-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const cid = btn.getAttribute('data-client-id');
+        this.removeClient(cid);
+      });
+    });
+
+    // Delete Task buttons
+    document.querySelectorAll('.delete-task-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tid = btn.getAttribute('data-task-id');
+        this.removeTask(tid);
+      });
+    });
 
     // Task click to open details
     document.querySelectorAll('[data-task-id]').forEach(el => {
       el.addEventListener('click', (e) => {
-        e.stopPropagation();
+        if (e.target.closest('.delete-task-btn')) return;
         const taskId = el.getAttribute('data-task-id');
         const task = this.state.tasks.find(t => t.id === taskId);
         if (task) {
@@ -940,6 +1425,13 @@ class WorkspaceApp {
       });
     }
 
+    const detailDelete = document.getElementById('detail-delete-task-btn');
+    if (detailDelete && this.state.selectedTask) {
+      detailDelete.addEventListener('click', () => {
+        this.removeTask(this.state.selectedTask.id);
+      });
+    }
+
     const modalOverlay = document.getElementById('modal-overlay');
     if (modalOverlay) {
       modalOverlay.addEventListener('click', (e) => {
@@ -949,50 +1441,50 @@ class WorkspaceApp {
       });
     }
 
-    // Add Member modal form submit
-    const addMemberForm = document.getElementById('add-member-modal-form');
+    // Add Client Form submit
+    const addClientForm = document.getElementById('add-client-form');
+    if (addClientForm) {
+      addClientForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(addClientForm);
+        await this.createClient({
+          name: fd.get('name'),
+          brand: fd.get('brand'),
+          retainer: fd.get('retainer'),
+          contact: fd.get('contact')
+        });
+      });
+    }
+
+    // Add Task Form submit
+    const addTaskForm = document.getElementById('add-task-form');
+    if (addTaskForm) {
+      addTaskForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(addTaskForm);
+        await this.createTask({
+          title: fd.get('title'),
+          client: fd.get('client'),
+          assignee: fd.get('assignee'),
+          date: fd.get('date'),
+          hours: fd.get('hours'),
+          description: fd.get('description')
+        });
+      });
+    }
+
+    // Add Member Form submit
+    const addMemberForm = document.getElementById('add-member-form');
     if (addMemberForm) {
       addMemberForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const fd = new FormData(addMemberForm);
-        const name = fd.get('name')?.trim();
-        const email = fd.get('email')?.trim().toLowerCase();
-        const role = fd.get('role');
-
-        if (!name || !email) return;
-
-        await this.createNewMember({ name, email, role });
-      });
-    }
-
-    // New task form submit
-    const newTaskForm = document.getElementById('new-task-form');
-    if (newTaskForm) {
-      newTaskForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fd = new FormData(newTaskForm);
-        const newTask = {
-          id: 't' + Date.now(),
-          title: fd.get('title'),
-          client: fd.get('client'),
-          assignee: fd.get('assignee'),
-          status: 'not_started',
-          date: fd.get('date'),
-          hours: 8,
-          priority: 'Medium',
-          description: 'Custom created task via workspace dashboard.'
-        };
-
-        this.setState(s => ({
-          tasks: [newTask, ...s.tasks],
-          modalOpen: false
-        }));
-
-        if (isConfigured) {
-          await insertDbTask(newTask);
-        }
-
-        this.toast(`Task “${newTask.title}” created successfully!`);
+        await this.createTeamMember({
+          name: fd.get('name'),
+          email: fd.get('email'),
+          password: fd.get('password'),
+          role: fd.get('role')
+        });
       });
     }
   }
