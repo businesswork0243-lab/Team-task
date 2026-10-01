@@ -149,6 +149,65 @@ begin
   return query select v_ws, true;
 end $$;
 
+-- Owner creates (or resets) a team member's login with a password, so no
+-- email is needed. Only touches accounts this workspace created, or accounts
+-- whose email was never confirmed. Returns 'created', 'updated' or 'existing'.
+create or replace function public.app_set_member_login(p_ws uuid, p_email text, p_password text, p_person_id text, p_name text default null)
+returns text
+language plpgsql security definer set search_path = public as $$
+#variable_conflict use_column
+declare
+  v_email text := lower(trim(coalesce(p_email, '')));
+  v_uid uuid;
+  v_user record;
+  v_status text;
+begin
+  if not app_is_owner(p_ws) then raise exception 'Only a workspace owner can set team logins.'; end if;
+  if v_email !~ '^\S+@\S+\.\S+$' then raise exception 'Enter a valid email address.'; end if;
+  if length(coalesce(p_password, '')) < 8 then raise exception 'Use at least 8 characters for the password.'; end if;
+
+  select id, email_confirmed_at, raw_app_meta_data->>'login_ws' as login_ws into v_user
+    from auth.users where lower(email) = v_email limit 1;
+
+  if v_user.id is null then
+    v_uid := gen_random_uuid();
+    insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+      raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+      confirmation_token, recovery_token, email_change, email_change_token_new)
+    values ('00000000-0000-0000-0000-000000000000', v_uid, 'authenticated', 'authenticated', v_email,
+      extensions.crypt(p_password, extensions.gen_salt('bf')), now(),
+      jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email'), 'login_ws', p_ws),
+      jsonb_build_object('name', coalesce(p_name, '')), now(), now(), '', '', '', '');
+    insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+    values (gen_random_uuid(), v_uid, v_uid::text,
+      jsonb_build_object('sub', v_uid::text, 'email', v_email, 'email_verified', true), 'email', now(), now(), now());
+    v_status := 'created';
+  elsif v_user.email_confirmed_at is null
+     or (v_user.login_ws = p_ws::text
+         and not exists (select 1 from app_members m where m.user_id = v_user.id and m.workspace_id <> p_ws)) then
+    v_uid := v_user.id;
+    update auth.users
+       set encrypted_password = extensions.crypt(p_password, extensions.gen_salt('bf')),
+           email_confirmed_at = coalesce(email_confirmed_at, now()),
+           raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || jsonb_build_object('login_ws', p_ws),
+           updated_at = now()
+     where id = v_uid;
+    v_status := 'updated';
+  else
+    v_status := 'existing';   -- their own account: they keep their own password
+  end if;
+
+  insert into app_members (workspace_id, email, user_id, person_id, role)
+    values (p_ws, v_email, v_uid, p_person_id, 'member')
+  on conflict (workspace_id, email) do update
+    set person_id = excluded.person_id,
+        user_id = coalesce(app_members.user_id, excluded.user_id);
+  return v_status;
+end $$;
+
+revoke all on function public.app_set_member_login(uuid, text, text, text, text) from public, anon;
+grant execute on function public.app_set_member_login(uuid, text, text, text, text) to authenticated;
+
 revoke all on function public.app_my_workspaces() from public, anon;
 revoke all on function public.app_create_workspace(text, text) from public, anon;
 grant execute on function public.app_my_workspaces() to authenticated;

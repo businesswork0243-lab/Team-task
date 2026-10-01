@@ -3010,11 +3010,11 @@ class Component extends DCLogic {
     if(type==='editEntry') form={...data,client:data.client||'',amount:String(data.amount),cur:data.cur||'INR',orig:data.orig!=null?String(data.orig):''};
     if(type==='task'){ const tc=data.client??(ctxClient&&this.can(ctxClient,'edit')?ctxClient:''); form={by:s.viewAs,dept:'mkt',title:'',brand:tc?C(tc).brand:((P(s.viewAs).hr||{}).brand||BRANDS[0].id),client:tc,who:data.who||(s.viewAs),due:data.due||'',status:data.status||'todo',pri:'medium',est:'',note:'',repeat:'none',rday:String(pd(data.due||TODAY).getDay()),every:'2',time:'',until:''}; }
     if(type==='client') form={name:'',company:'',brand:BRANDS[0].id,retainer:'',services:'',contact:'',sinceDate:TODAY,payDay:''};
-    if(type==='editMember'){ const x=data.hr||{}; form={id:data.id,name:data.name,role:data.role||'',dept:x.dept||'',brand:x.brand||BRANDS[0].id,type:x.type||'Full-time',start:x.start||'',salary:x.salary!=null?String(x.salary):'',email:x.email||'',phone:x.phone||'',manager:x.manager||''}; }
+    if(type==='editMember'){ const x=data.hr||{}; form={id:data.id,name:data.name,role:data.role||'',dept:x.dept||'',brand:x.brand||BRANDS[0].id,type:x.type||'Full-time',start:x.start||'',salary:x.salary!=null?String(x.salary):'',email:x.email||'',phone:x.phone||'',manager:x.manager||'',loginPw:''}; }
     if(type==='editClient') form={...data,company:data.company||'',services:data.services||'',contact:data.contact||'',retainer:String(data.retainer),sinceDate:data.sinceDate||'',payDay:data.payDay||''};
     if(type==='removeClient') form={...data};
     if(type==='removeMember') form={...data};
-    if(type==='member') form={name:'',role:'',dept:DEPTS0[1],brand:BRANDS[0].id,type:'Full-time',start:TODAY,salary:'',email:''};
+    if(type==='member') form={name:'',role:'',dept:DEPTS0[1],brand:BRANDS[0].id,type:'Full-time',start:TODAY,salary:'',email:'',loginPw:''};
     if(type==='person') form={name:'',rel:'Client contact',client:data.client||'',detail:'',pid:data.pid||''};
     if(type==='leave') form={who:(OWN(s.viewAs)&&data.who)||s.viewAs,type:'Annual',from:'',to:'',note:''};
     if(type==='draw') form={partner:PARTNERS[0].id,amount:'',date:TODAY,src:data.src||'',note:''};
@@ -3054,6 +3054,13 @@ class Component extends DCLogic {
   removeDept(d){ const n=this.state.people.filter(p=>p.team&&p.hr&&p.hr.dept===d).length;
     if(n) return this.toast(n+(n===1?' member is':' members are')+' in '+d+'. Move them to another department first.');
     this.setState(s=>({depts:s.depts.filter(x=>x!==d),deptFilter:s.deptFilter===d?'all':s.deptFilter})); this.log({kind:'team',text:'removed the department “'+d+'”',target:'Team',from:d,to:''}); this.toast(d+' removed.'); }
+  async setLogin(email,pw,pid,name){ const s=this.state, Cl=window.Cloud; if(!s.ws||!Cl||!Cl.enabled) return;
+    if(!OWN(s.me)) return this.toast('Only a workspace owner can set logins.');
+    try{ this.queueSync(); await this.flush(); const r=await Cl.setMemberLogin(s.ws,email,pw,pid,name); this._members=null;
+      if(r==='existing') this.toast(name+' already has their own account with '+email+'. They log in with their own password.');
+      else this.toast('Login ready: '+name+' can log in with '+email+' and the password you set.');
+      this.log({kind:'access',text:(r==='updated'?'reset the login of ':'set up a login for ')+name,target:'Team',from:'',to:email}); }
+    catch(e){ console.error(e); this.toast('Login not created: '+Cl.errText(e)); } }
   newId(p){ this._seq=(this._seq||0)+1; return p+Date.now().toString(36)+Math.random().toString(36).slice(2,6)+'_'+this._seq; }
   addClientRec(name,brand,retainer,contact,extra){ const c={id:this.newId('c'),name,brand,retainer:+retainer||0,contact:contact||'Not set',company:(extra&&extra.company)||name,services:(extra&&extra.services)||'',sinceDate:(extra&&extra.sinceDate)||TODAY,payDay:(extra&&extra.payDay)||''}; c.since=MN[+c.sinceDate.slice(5,7)-1]+' '+c.sinceDate.slice(0,4);
     this.setState(s=>{ const g={...s.grants}; s.people.filter(p=>p.team&&!OWN(p.id)).forEach(p=>g[p.id+':'+c.id]=p.id==='p4'?'finance':'none'); return {clients:[...s.clients,c],grants:g}; });
@@ -3124,16 +3131,20 @@ class Component extends DCLogic {
     } else if(s.modal==='member'){
       if(!f.name.trim()) err.name='Enter a full name.'; if(!f.role.trim()) err.role='Add a role.';
       if(f.email&&!/^\S+@\S+\.\S+$/.test(f.email)) err.email='Enter a valid email address.';
+      if(f.loginPw){ if(f.loginPw.length<8) err.loginPw='Use at least 8 characters.'; if(!f.email) err.email='Add a work email for their login.'; }
       if(Object.keys(err).length) return this.setState({errors:err});
-      this.addMemberRec({...f,name:f.name.trim(),role:f.role.trim(),salary:num(f.salary)}); done(f.name.trim()+' added to the team.'+(f.email?' They can sign up with '+f.email.trim().toLowerCase()+' to get access.':''));
+      const nid=this.addMemberRec({...f,name:f.name.trim(),role:f.role.trim(),salary:num(f.salary)}); done(f.name.trim()+' added to the team.'+(f.email&&!f.loginPw?' They can sign up with '+f.email.trim().toLowerCase()+' to get access.':''));
+      if(f.loginPw) this.setLogin(f.email.trim().toLowerCase(),f.loginPw,nid,f.name.trim());
     } else if(s.modal==='editMember'){
       if(!f.name.trim()) err.name='Enter a full name.'; if(f.email&&!/^\S+@\S+\.\S+$/.test(f.email)) err.email='Enter a valid email address.';
+      if(f.loginPw){ if(f.loginPw.length<8) err.loginPw='Use at least 8 characters.'; if(!f.email) err.email='Add a work email for their login.'; }
       const ns=f.salary===''?null:num(f.salary); if(f.salary!==''&&(!ns||ns<0)) err.salary='Enter a monthly amount in rupees.';
       if(Object.keys(err).length) return this.setState({errors:err});
       const old=P(f.id);
       this.setState(x=>({people:x.people.map(p=>p.id!==f.id?p:{...p,name:f.name.trim(),role:f.role.trim(),hr:{...p.hr,dept:f.dept,brand:f.brand,type:f.type,start:f.start,email:f.email.trim(),phone:f.phone.trim(),manager:f.manager,salary:ns,
         salHist:ns&&ns!==(p.hr.salary||null)?[...(p.hr.salHist||[]),{from:TODAY,amount:ns}]:p.hr.salHist}}),drawer:{type:'person',id:f.id}}));
       this.log({kind:'team',text:'edited the profile of '+f.name.trim(),target:'Team',from:old.hr&&old.hr.salary!==ns?inr(old.hr.salary||0):'',to:old.hr&&old.hr.salary!==ns?inr(ns||0):'Profile updated'}); done('Profile saved.');
+      if(f.loginPw) this.setLogin(f.email.trim().toLowerCase(),f.loginPw,f.id,f.name.trim());
     } else if(s.modal==='leave'){
       if(!OWN(s.viewAs)&&f.who!==s.viewAs) err.who='You can only request leave for yourself.'; if(!f.from) err.from='Pick a start date.'; if(!f.to) err.to='Pick an end date.'; if(f.from&&f.to&&f.to<f.from) err.to='End date is before the start date.';
       if(Object.keys(err).length) return this.setState({errors:err});
@@ -3603,11 +3614,11 @@ class Component extends DCLogic {
       fld('dept','Department',{options:opt(s.depts),add:'department',addKind:'dept'}),fld('brand','Primary brand',{options:brandOpts}),
       fld('type','Employment type',{options:opt(['Full-time','Part-time','Contract','Intern','Founder'])}),fld('start','Start date',{type:'date'}),
       fld('salary','Monthly salary (₹)',{ph:'e.g. 60000'}),fld('manager','Reports to',{options:[{id:'',name:'No one'},...teamOpts.filter(o=>o.id!==f.id)]}),
-      fld('email','Work email',{type:'email'}),fld('phone','Phone',{ph:'Optional'})],hasNote:true,note:'Changes are recorded in the audit trail.'};
+      fld('email','Work email',{type:'email'}),fld('phone','Phone',{ph:'Optional'}),...(OWN(s.me)?[fld('loginPw','Login password',{ph:'Set or reset their login (optional)',full:true})]:[])],hasNote:true,note:'Changes are recorded in the audit trail.'+(OWN(s.me)?' A login password lets them log in with their work email right away; share it with them.':'')};
     if(s.modal==='member') md={title:'New team member',submit:'Add to team',fields:[fld('name','Full name',{ph:'e.g. Kavya Reddy'}),fld('role','Role',{ph:'e.g. Account manager'}),
       fld('dept','Department',{options:opt(s.depts),add:'department',addKind:'dept'}),fld('brand','Primary brand',{options:brandOpts,add:'brand',addKind:'brand'}),
       fld('type','Employment type',{options:opt(['Full-time','Part-time','Contract','Intern'])}),fld('start','Start date',{type:'date'}),
-      fld('salary','Monthly salary (₹)',{ph:'e.g. 60000'}),fld('email','Work email',{type:'email',ph:'name@company.com'})],hasNote:true,note:'New members get no client access until you grant it.'};
+      fld('salary','Monthly salary (₹)',{ph:'e.g. 60000'}),fld('email','Work email',{type:'email',ph:'name@company.com'}),...(OWN(s.me)?[fld('loginPw','Login password',{ph:'At least 8 characters (optional)',full:true})]:[])],hasNote:true,note:'New members get no client access until you grant it.'+(OWN(s.me)?' Add a work email and a login password to create their login now; share it with them.':'')};
     if(s.modal==='person'){ const ex=f.pid?P(f.pid):null; md={title:ex?'Add relationship to '+ex.name:'New person',submit:ex?'Add relationship':'Add person',
       fields:[...(ex?[]:[fld('name','Name',{ph:'e.g. Nisha Pillai',full:true})]),fld('rel','Relationship',{options:opt(['Client contact','Investor','Introducer','Partner','Advisor','Vendor',...(s.relTypes||[])]),add:'relationship type',addKind:'rel'}),
         fld('client','Linked client',{options:[{id:'',name:'None'},...vis.map(c=>({id:c.id,name:c.name}))],add:'client',addKind:'client'}),fld('detail','Detail',{ph:'e.g. Introduced us in May 2026',full:true})],

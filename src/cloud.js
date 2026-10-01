@@ -49,7 +49,7 @@
     if (/rate limit|too many/i.test(m)) return 'Too many attempts. Wait a minute and try again.';
     if (/password should be|weak password/i.test(m)) return 'Choose a stronger password (at least 8 characters).';
     if (/failed to fetch|network/i.test(m)) return 'Cannot reach the server. Check your connection.';
-    if (/app_my_workspaces|app_items|does not exist|schema cache/i.test(m)) return 'The database is not set up yet. Run supabase/setup.sql in Supabase.';
+    if (/app_my_workspaces|app_set_member_login|app_items|does not exist|schema cache|could not find the function/i.test(m)) return 'The database is not up to date. Run supabase/schema.sql in the Supabase SQL Editor.';
     return m || 'Something went wrong. Try again.';
   }
 
@@ -128,6 +128,9 @@
     },
     async upsertMembers(ws, rows) {
       must(await sb.from('app_members').upsert(rows.map((r) => ({ ...r, workspace_id: ws })), { onConflict: 'workspace_id,email' }));
+    },
+    async setMemberLogin(ws, email, password, personId, name) {
+      return must(await sb.rpc('app_set_member_login', { p_ws: ws, p_email: email, p_password: password, p_person_id: personId, p_name: name || null }));
     },
     async deleteMembers(ws, emails) {
       must(await sb.from('app_members').delete().eq('workspace_id', ws).in('email', emails));

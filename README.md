@@ -17,11 +17,16 @@ Har user signup karke apna alag workspace banata hai. Owner apni team ko email s
 
 ## Setup
 
-1. **Database**: Supabase Dashboard → SQL Editor me `supabase/schema.sql` run karo.
-   (Local `supabase/setup.sql` me schema + demo data dono hain; ye file git me commit nahi hoti.)
+1. **Database**: Supabase Dashboard → SQL Editor me `supabase/schema.sql` run karo. Ye dobara chalana safe hai; schema badalne par (naye functions) ise phir se run karo.
 2. **Auth**: Authentication → URL Configuration me *Site URL* ko Vercel URL par set karo, aur wahi URL *Redirect URLs* me add karo. *Confirm email* ON rakho; invites aur demo data sirf confirmed email ko milte hain.
 3. **Vercel env vars**: `VITE_SUPABASE_URL` aur `VITE_SUPABASE_ANON_KEY` (Project Settings → Environment Variables). Build command `npm run build`, output `dist` (`vercel.json` me already set hai).
 4. **Local**: `.env` banao (`.env.example` dekho), phir `npm install` aur `npm run dev`, aur http://localhost:5173 kholo.
+
+## Team member login
+
+Owner Team member add/edit karte waqt **Work email** aur **Login password** bharta hai. Account turant ban jata hai (email confirm ki zaroorat nahi), aur member usi email/password se login karta hai. Owner wahi field se password reset bhi kar sakta hai. Ye `app_set_member_login` function se hota hai, jo sirf us workspace ke banaye accounts (ya kabhi confirm na hue accounts) ka password badalta hai; kisi ka apna account ho to wo apne password se hi login karta hai.
+
+Password ke bina sirf email daalne par member khud website par usi email se Sign up karke jud sakta hai.
 
 ## Data model
 
