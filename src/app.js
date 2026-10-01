@@ -7,7 +7,7 @@ import {
 import { icon, workspaceLogo } from './icons.js';
 import {
   isConfigured, getDbClients, getDbTeamMembers, getDbTasks,
-  insertDbTask, updateDbTask, subscribeToTaskChanges
+  insertDbTask, updateDbTask, insertDbTeamMember, subscribeToTaskChanges
 } from './supabase.js';
 
 class WorkspaceApp {
@@ -19,10 +19,10 @@ class WorkspaceApp {
       isLoggedIn: Boolean(sessionUserId),
       currentView: 'dashboard', // 'dashboard' | 'tasks' | 'clients'
       viewAs: sessionUserId || 'rakesh',
-      loginTab: 'profiles', // 'profiles' | 'email'
+      loginTab: 'signup', // 'profiles' | 'email' | 'signup' (Default to signup if requested)
       tasks: saved?.tasks || JSON.parse(JSON.stringify(TASKS_DATA)),
       clients: saved?.clients || JSON.parse(JSON.stringify(CLIENTS)),
-      teamMembers: TEAM_MEMBERS,
+      teamMembers: saved?.teamMembers || TEAM_MEMBERS,
       activeStatusFilter: saved?.activeStatusFilter || 'total',
       selectedBrand: saved?.selectedBrand || 'all',
       selectedAssignee: saved?.selectedAssignee || 'all',
@@ -30,7 +30,7 @@ class WorkspaceApp {
       currentMonth: 9, // 0-indexed: 9 = October
       searchQuery: '',
       modalOpen: false,
-      modalType: 'addTask', // 'addTask' | 'taskDetail'
+      modalType: 'addTask', // 'addTask' | 'taskDetail' | 'addMember'
       selectedTask: null,
       toast: null,
       cloudConnected: isConfigured
@@ -92,12 +92,12 @@ class WorkspaceApp {
     this.setState({ toast: msg });
     this._toastTimer = setTimeout(() => {
       this.setState({ toast: null });
-    }, 3200);
+    }, 3500);
   }
 
   login(userId) {
     setSessionUser(userId);
-    const member = this.state.teamMembers.find(m => m.id === userId) || TEAM_MEMBERS[1];
+    const member = this.state.teamMembers.find(m => m.id === userId) || this.state.teamMembers[0];
     this.setState({
       isLoggedIn: true,
       viewAs: userId,
@@ -110,13 +110,51 @@ class WorkspaceApp {
     setSessionUser(null);
     this.setState({
       isLoggedIn: false,
+      loginTab: 'signup', // show signup/login choice
       currentView: 'dashboard'
     });
     this.toast('Logged out successfully.');
   }
 
+  async createNewMember({ name, email, role, password }) {
+    const isFounder = role === 'Owner & Founder';
+    let allowedClients = [];
+    if (isFounder || role === 'Operations lead' || role === 'Finance lead') {
+      allowedClients = ['arc3', 'mer', 'sah', 'oak', 'lum'];
+    } else if (role === 'Designer') {
+      allowedClients = ['arc3', 'mer', 'oak'];
+    } else if (role === 'Developer') {
+      allowedClients = ['sah', 'oak', 'lum'];
+    }
+
+    const newId = 'u_' + Date.now();
+    const newMember = {
+      id: newId,
+      name,
+      email,
+      role,
+      badge: role.split(' ')[0],
+      isFounder,
+      allowedClients
+    };
+
+    const updatedTeam = [...this.state.teamMembers, newMember];
+
+    this.setState({
+      teamMembers: updatedTeam,
+      modalOpen: false
+    });
+
+    if (isConfigured) {
+      await insertDbTeamMember(newMember);
+    }
+
+    this.login(newId);
+    this.toast(`Nayi ID ban gayi! Welcome, ${newMember.name}!`);
+  }
+
   getCurrentUser() {
-    return this.state.teamMembers.find(m => m.id === this.state.viewAs) || this.state.teamMembers[1]; // default Rakesh
+    return this.state.teamMembers.find(m => m.id === this.state.viewAs) || this.state.teamMembers[0];
   }
 
   isFounder() {
@@ -167,7 +205,7 @@ class WorkspaceApp {
     const appEl = document.getElementById('app');
     if (!appEl) return;
 
-    // If user is logged out, render the Login Screen
+    // If user is logged out, render the Login/Registration Screen
     if (!this.state.isLoggedIn) {
       appEl.innerHTML = this.renderLoginPage();
       this.attachLoginEvents();
@@ -219,6 +257,12 @@ class WorkspaceApp {
                 </option>
               `).join('')}
             </select>
+
+            <button id="sidebar-add-member-btn" class="chip" style="width:100%;height:32px;justify-content:center;margin-top:4px;border-color:#334155;background:#1E293B;color:#F8FAFC;font-size:11.5px;cursor:pointer">
+              ${icon('plus', 14)}
+              <span>Add New User / ID</span>
+            </button>
+
             <span class="sidebar-footer-caption">
               Access is enforced per person, per client.
             </span>
@@ -308,18 +352,58 @@ class WorkspaceApp {
           <div class="login-card-header">
             ${workspaceLogo(48)}
             <h1 class="login-title">Operations Workspace</h1>
-            <p class="login-subtitle">Choose your user profile or sign in to access your assigned client dashboard.</p>
+            <p class="login-subtitle">Nayi ID banayein ya existing profile se sign in karein.</p>
           </div>
 
           <div class="login-tabs">
+            <button class="login-tab-btn ${this.state.loginTab === 'signup' ? 'active' : ''}" data-login-tab="signup">
+              + Create New ID (Sign Up)
+            </button>
             <button class="login-tab-btn ${this.state.loginTab === 'profiles' ? 'active' : ''}" data-login-tab="profiles">
               Team Profiles (1-Click)
             </button>
             <button class="login-tab-btn ${this.state.loginTab === 'email' ? 'active' : ''}" data-login-tab="email">
-              Email & Password
+              Sign In with Email
             </button>
           </div>
 
+          <!-- TAB 1: SIGN UP (CREATE NEW ID) -->
+          ${this.state.loginTab === 'signup' ? `
+            <form id="signup-form" class="login-form-box">
+              <label class="login-form-group">
+                Full Name (Pura Naam)
+                <input id="signup-name" type="text" class="login-input" placeholder="e.g. Sameer Thakur" required />
+              </label>
+
+              <label class="login-form-group">
+                Email Address
+                <input id="signup-email" type="email" class="login-input" placeholder="e.g. sameer@workspace.com" required />
+              </label>
+
+              <label class="login-form-group">
+                Workspace Role & Permission
+                <select id="signup-role" class="login-input" style="background:#fff;cursor:pointer">
+                  <option value="Owner & Founder">Owner & Founder (Full access to all 5 clients)</option>
+                  <option value="Operations lead">Operations lead (Manage tasks & all clients)</option>
+                  <option value="Designer">Designer (Design clients: ARC3, Meridian, Oakline)</option>
+                  <option value="Developer">Developer (Tech clients: Sahyadri, Oakline, Lumen)</option>
+                  <option value="Finance lead">Finance lead (All client finances & reports)</option>
+                  <option value="Team member" selected>Team member (Standard member view)</option>
+                </select>
+              </label>
+
+              <label class="login-form-group">
+                Create Password
+                <input id="signup-password" type="password" class="login-input" placeholder="Choose a password" required value="workspace123" />
+              </label>
+
+              <button type="submit" class="login-submit-btn" style="background:#10B981">
+                + Create ID & Enter Workspace (Nayi ID Banayein)
+              </button>
+            </form>
+          ` : ''}
+
+          <!-- TAB 2: PROFILES SELECTOR -->
           ${this.state.loginTab === 'profiles' ? `
             <div class="user-profiles-grid">
               ${this.state.teamMembers.map(m => {
@@ -339,10 +423,13 @@ class WorkspaceApp {
                 `;
               }).join('')}
             </div>
-          ` : `
+          ` : ''}
+
+          <!-- TAB 3: EMAIL & PASSWORD LOGIN -->
+          ${this.state.loginTab === 'email' ? `
             <form id="email-login-form" class="login-form-box">
               <label class="login-form-group">
-                Email Address
+                Registered Email Address
                 <input id="login-email" type="email" class="login-input" placeholder="e.g. rakesh@workspace.com" required value="rakesh@workspace.com" />
               </label>
 
@@ -355,7 +442,7 @@ class WorkspaceApp {
                 Sign In to Workspace
               </button>
             </form>
-          `}
+          ` : ''}
         </div>
 
         ${this.state.toast ? `<div class="toast-msg">${this.escapeHtml(this.state.toast)}</div>` : ''}
@@ -379,18 +466,43 @@ class WorkspaceApp {
       });
     });
 
+    // Sign up form
+    const signupForm = document.getElementById('signup-form');
+    if (signupForm) {
+      signupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('signup-name')?.value.trim();
+        const email = document.getElementById('signup-email')?.value.trim().toLowerCase();
+        const role = document.getElementById('signup-role')?.value;
+        const password = document.getElementById('signup-password')?.value;
+
+        if (!name || !email) return;
+
+        // Check if email already registered
+        const existing = this.state.teamMembers.find(m => m.email && m.email.toLowerCase() === email);
+        if (existing) {
+          this.toast('Yeh email pehle se registered hai! Signing in...');
+          this.login(existing.id);
+          return;
+        }
+
+        await this.createNewMember({ name, email, role, password });
+      });
+    }
+
     // Email login form
     const emailForm = document.getElementById('email-login-form');
     if (emailForm) {
       emailForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const email = document.getElementById('login-email')?.value.trim().toLowerCase();
-        const matched = this.state.teamMembers.find(m => m.email.toLowerCase() === email);
+        const matched = this.state.teamMembers.find(m => m.email && m.email.toLowerCase() === email);
         if (matched) {
           this.login(matched.id);
         } else {
-          // Default to Rakesh Kumar if arbitrary email
-          this.login('rakesh');
+          // If not matched, automatically create ID or inform
+          this.toast('Email not found. Nayi ID banane ke liye Create New ID tab use karein.');
+          this.setState({ loginTab: 'signup' });
         }
       });
     }
@@ -488,7 +600,7 @@ class WorkspaceApp {
     for (let day = 1; day <= 31; day++) {
       const dateStr = `2026-10-${String(day).padStart(2, '0')}`;
       const holiday = HOLIDAYS_2026_OCT[dateStr];
-      const isCurrentHighlight = day === 1; // Highlight Oct 1 as in screenshot
+      const isCurrentHighlight = day === 1;
 
       let dayTasks = visibleTasks.filter(t => t.date === dateStr);
       if (this.state.activeStatusFilter !== 'total') {
@@ -534,7 +646,7 @@ class WorkspaceApp {
       <div class="tasks-container">
         ${visibleTasks.map(t => {
           const client = getClient(t.client);
-          const assignee = getMember(t.assignee);
+          const assignee = getMember(t.assignee) || this.state.teamMembers.find(m => m.id === t.assignee);
           const st = STATUS_LIST.find(s => s.id === t.status) || STATUS_LIST[1];
 
           return `
@@ -585,10 +697,50 @@ class WorkspaceApp {
   }
 
   renderModal() {
+    if (this.state.modalType === 'addMember') {
+      return `
+        <div class="modal-overlay" id="modal-overlay">
+          <form class="modal-content" id="add-member-modal-form">
+            <div class="modal-header">
+              <h2 class="modal-title">+ Add New Team ID</h2>
+              <button type="button" id="modal-close-btn" class="modal-close-btn">${icon('close', 18)}</button>
+            </div>
+
+            <label class="modal-form-group">
+              Full Name (Pura Naam)
+              <input name="name" class="modal-input" placeholder="e.g. Sameer Thakur" required />
+            </label>
+
+            <label class="modal-form-group">
+              Email Address
+              <input name="email" type="email" class="modal-input" placeholder="e.g. sameer@workspace.com" required />
+            </label>
+
+            <label class="modal-form-group">
+              Role & Permission
+              <select name="role" class="modal-select">
+                <option value="Owner & Founder">Owner & Founder (Full access to all 5 clients)</option>
+                <option value="Operations lead">Operations lead (Manage tasks & all clients)</option>
+                <option value="Designer">Designer (Design clients: ARC3, Meridian, Oakline)</option>
+                <option value="Developer">Developer (Tech clients: Sahyadri, Oakline, Lumen)</option>
+                <option value="Finance lead">Finance lead (All client finances & reports)</option>
+                <option value="Team member" selected>Team member (Standard member view)</option>
+              </select>
+            </label>
+
+            <div class="modal-actions">
+              <button type="button" id="modal-cancel-btn" class="today-btn">Cancel</button>
+              <button type="submit" class="add-btn" style="height:38px;background:#10B981">Create Member ID</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
     if (this.state.modalType === 'taskDetail' && this.state.selectedTask) {
       const t = this.state.selectedTask;
       const client = getClient(t.client);
-      const assignee = getMember(t.assignee);
+      const assignee = getMember(t.assignee) || this.state.teamMembers.find(m => m.id === t.assignee);
       const st = STATUS_LIST.find(s => s.id === t.status) || STATUS_LIST[1];
 
       return `
@@ -686,7 +838,15 @@ class WorkspaceApp {
       });
     }
 
-    // Logout button - Actual Logout to Login screen
+    // Add Member button inside sidebar
+    const addMemberBtn = document.getElementById('sidebar-add-member-btn');
+    if (addMemberBtn) {
+      addMemberBtn.addEventListener('click', () => {
+        this.setState({ modalOpen: true, modalType: 'addMember' });
+      });
+    }
+
+    // Logout button
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', () => {
@@ -786,6 +946,22 @@ class WorkspaceApp {
         if (e.target === modalOverlay) {
           this.setState({ modalOpen: false, selectedTask: null });
         }
+      });
+    }
+
+    // Add Member modal form submit
+    const addMemberForm = document.getElementById('add-member-modal-form');
+    if (addMemberForm) {
+      addMemberForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(addMemberForm);
+        const name = fd.get('name')?.trim();
+        const email = fd.get('email')?.trim().toLowerCase();
+        const role = fd.get('role');
+
+        if (!name || !email) return;
+
+        await this.createNewMember({ name, email, role });
       });
     }
 

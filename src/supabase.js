@@ -57,6 +57,31 @@ export async function getDbTeamMembers() {
   }
 }
 
+export async function insertDbTeamMember(member) {
+  if (!isConfigured || !supabase) {
+    return member;
+  }
+  try {
+    const { data, error } = await supabase
+      .from('team_members')
+      .insert([{
+        id: member.id,
+        name: member.name,
+        role: member.role,
+        is_founder: Boolean(member.isFounder),
+        allowed_clients: member.allowedClients || []
+      }])
+      .select();
+    if (error) {
+      console.error('Failed to insert team member into Supabase:', error);
+    }
+    return (data && data[0]) ? data[0] : member;
+  } catch (err) {
+    console.error('Insert team member error:', err);
+    return member;
+  }
+}
+
 export async function getDbTasks() {
   if (!isConfigured || !supabase) {
     return TASKS_DATA;

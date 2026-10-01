@@ -243,6 +243,7 @@ export function persistState(state) {
       viewAs: state.viewAs,
       tasks: state.tasks,
       clients: state.clients,
+      teamMembers: state.teamMembers,
       activeStatusFilter: state.activeStatusFilter,
       selectedBrand: state.selectedBrand,
       selectedAssignee: state.selectedAssignee,
