@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:"Gontserrat";src:url("assets/fonts/Gontserrat-Regular.ttf") format("truetype");font-weight:400;font-display:swap}
+@font-face{font-family:"Gontserrat";src:url("assets/fonts/Gontserrat-Bold.ttf") format("truetype");font-weight:700;font-display:swap}
+@font-face{font-family:"Perpetua";src:url("assets/fonts/Perpetua-Regular.ttf") format("truetype");font-weight:400;font-display:swap}
+@keyframes opRise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+html,body{margin:0;padding:0;background:#fff;color:#070707;font-family:"Gontserrat",Montserrat,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#1B998F;text-decoration:none}
+a:hover{color:#157F77;text-decoration:underline}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid rgba(27,153,143,.35);outline-offset:1px}
+</style>
+</helmet>
+<div style="display:flex;height:100vh;width:100%;overflow:hidden;background:#fff">
+
+  <sc-if value="{{ scrim }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeMenu }}" style="position:fixed;inset:0;background:rgba(7,7,7,.45);z-index:29"></div>
+  </sc-if>
+
+  <aside style="width:248px;flex-shrink:0;display:flex;flex-direction:column;background:{{ sb.bg }};color:{{ sb.fg }};border-right:1px solid rgba(119,120,123,.2);position:{{ sb.position }};top:0;left:0;bottom:0;z-index:30;transform:{{ sb.transform }};transition:transform 200ms ease;--icon-stroke:{{ sb.icon }};--icon-accent:#1B998F">
+    <div style="display:flex;align-items:center;gap:10px;padding:22px 20px 18px">
+      <img src="assets/logo/mark-teal.png" alt="Cubane" style="width:28px;height:28px;object-fit:contain">
+      <div style="display:flex;flex-direction:column;line-height:1.2">
+        <span style="font-weight:700;font-size:15px">Operations</span>
+        <span style="font-size:11px;opacity:.7">Hephaestus workspace</span>
+      </div>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px;padding:8px 12px;flex:1;overflow:auto">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="7">
+        <button onClick="{{ n.go }}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:0;border-radius:8px;background:{{ n.bg }};color:{{ sb.fg }};font-weight:{{ n.weight }};font-size:14px;text-align:left;cursor:pointer;transition:background 120ms" style-hover="background:{{ sb.hover }}">
+          <svg width="20" height="20" style="flex-shrink:0"><use href="{{ n.icon }}"></use></svg>
+          <span style="flex:1">{{ n.label }}</span>
+          <span style="font-size:11px;opacity:.7">{{ n.count }}</span>
+        </button>
+      </sc-for>
+    </nav>
+    <div style="padding:16px;border-top:1px solid {{ sb.line }};display:flex;flex-direction:column;gap:8px">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.7">Viewing as</label>
+      <select value="{{ viewAs }}" onChange="{{ onViewAs }}" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid {{ sb.line }};background:{{ sb.inputBg }};color:{{ sb.fg }};font-size:13px">
+        <sc-for list="{{ teamOptions }}" as="o"><option value="{{ o.id }}">{{ o.label }}</option></sc-for>
+      </select>
+      <span style="font-size:11px;opacity:.7;line-height:1.5">Access is enforced per person, per client. Switch to see another person's view.</span>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;overflow:auto;background:rgba(27,153,143,.035)">
+    <header style="position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px {{ L.pad }};background:rgba(255,255,255,.96);border-bottom:1px solid rgba(119,120,123,.2)">
+      <sc-if value="{{ isNarrow }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ openMenu }}" aria-label="Open menu" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(119,120,123,.3);border-radius:8px;background:#fff;cursor:pointer">
+          <svg width="20" height="20"><use href="assets/icons/cubane-icons.svg#cb-grid"></use></svg>
+        </button>
+      </sc-if>
+      <div style="flex:1 1 160px;min-width:0">
+        <div style="display:flex;gap:6px;align-items:center;font-size:12px;color:#77787B">
+          <sc-if value="{{ hasCrumb }}"><a href="#" onClick="{{ crumbGo }}">{{ crumb }}</a><span>/</span></sc-if>
+          <span>{{ sub }}</span>
+        </div>
+        <h1 style="margin:2px 0 0;font-size:21px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ title }}</h1>
+      </div>
+      <div style="position:relative;flex:1 1 220px;max-width:340px">
+        <input value="{{ q }}" onChange="{{ onQ }}" onFocus="{{ openSearch }}" placeholder="Search clients and people" style="width:100%;height:40px;padding:0 14px 0 38px;border:1px solid rgba(119,120,123,.3);border-radius:999px;background:#fff;font-size:13px">
+        <svg width="18" height="18" style="position:absolute;left:13px;top:11px;pointer-events:none"><use href="assets/icons/cubane-icons.svg#cb-search"></use></svg>
+        <sc-if value="{{ showResults }}">
+          <div style="position:absolute;top:46px;left:0;right:0;background:#fff;border:1px solid rgba(119,120,123,.25);border-radius:8px;box-shadow:0 8px 24px rgba(16,73,67,.12);padding:6px;z-index:20;animation:opRise 200ms ease">
+            <sc-for list="{{ results }}" as="r">
+              <button onClick="{{ r.go }}" style="display:flex;width:100%;justify-content:space-between;gap:8px;padding:10px;border:0;background:transparent;border-radius:6px;cursor:pointer;text-align:left;font-size:13px" style-hover="background:rgba(27,153,143,.08)">
+                <span style="font-weight:700">{{ r.name }}</span><span style="color:#77787B;font-size:12px">{{ r.kind }}</span>
+              </button>
+            </sc-for>
+            <sc-if value="{{ noResults }}"><div style="padding:10px;font-size:13px;color:#77787B">No matches you have access to.</div></sc-if>
+          </div>
+        </sc-if>
+      </div>
+      <sc-if value="{{ primary.show }}">
+        <button onClick="{{ primary.go }}" style="height:40px;padding:0 18px;border:0;border-radius:999px;background:#1B998F;color:#fff;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap" style-hover="background:#22A99E" style-active="background:#157F77">{{ primary.label }}</button>
+      </sc-if>
+    </header>
+
+    <sc-if value="{{ restricted }}">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:16px {{ L.pad }} 0;padding:12px 16px;border-radius:8px;background:#104943;color:#fff;font-size:13px;--icon-stroke:#fff">
+        <svg width="18" height="18"><use href="assets/icons/cubane-icons.svg#cb-lock"></use></svg>
+        <span style="flex:1;min-width:200px">{{ restrictedText }}</span>
+        <button onClick="{{ resetViewAs }}" style="border:1px solid rgba(255,255,255,.5);background:transparent;color:#fff;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">Back to founder view</button>
+      </div>
+    </sc-if>
+
+    <div style="padding:24px {{ L.pad }} 64px;max-width:1280px;animation:opRise 360ms ease" key="{{ viewKey }}">
+
+      <!-- DASHBOARD -->
+      <sc-if value="{{ is.dashboard }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
+          <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;padding:18px 20px">
+              <div style="font-size:12px;color:#77787B">{{ k.label }}</div>
+              <div style="font-family:Perpetua,Georgia,serif;font-size:40px;line-height:1.1;margin-top:6px;color:#104943">{{ k.value }}</div>
+              <div style="font-size:12px;color:#77787B;margin-top:2px">{{ k.note }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px;margin-top:16px">
+          <section style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;padding:20px">
+            <h2 style="margin:0 0 4px;font-size:15px">Spend by brand</h2>
+            <p style="margin:0 0 18px;font-size:12px;color:#77787B">July to September, clients with finance access</p>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <sc-for list="{{ brandSpend }}" as="b" hint-placeholder-count="4">
+                <button onClick="{{ b.go }}" style="display:flex;flex-direction:column;gap:6px;border:0;background:transparent;padding:0;text-align:left;cursor:pointer">
+                  <div style="display:flex;justify-content:space-between;width:100%;font-size:13px"><span style="font-weight:700">{{ b.name }}</span><span>{{ b.value }}</span></div>
+                  <div style="height:8px;width:100%;background:rgba(27,153,143,.1);border-radius:2px;overflow:hidden"><div style="height:100%;width:{{ b.pct }};background:#1B998F;transition:width 360ms ease"></div></div>
+                </button>
+              </sc-for>
+            </div>
+          </section>
+          <section style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;padding:20px">
+            <h2 style="margin:0 0 4px;font-size:15px">Team hours by brand</h2>
+            <p style="margin:0 0 18px;font-size:12px;color:#77787B">Logged in September</p>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <sc-for list="{{ brandHours }}" as="b" hint-placeholder-count="4">
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:700">{{ b.name }}</span><span>{{ b.value }}</span></div>
+                  <div style="height:8px;background:rgba(16,73,67,.1);border-radius:2px;overflow:hidden"><div style="height:100%;width:{{ b.pct }};background:#104943;transition:width 360ms ease"></div></div>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px;margin-top:16px">
+          <section style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;padding:20px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:12px"><h2 style="margin:0;font-size:15px">Lowest margin this month</h2><a href="#" onClick="{{ goClientsByMargin }}" style="font-size:12px;font-weight:700">All clients</a></div>
+            <sc-for list="{{ marginList }}" as="m" hint-placeholder-count="5">
+              <button onClick="{{ m.go }}" style="display:flex;width:100%;align-items:center;gap:12px;padding:10px 0;border:0;border-top:1px solid rgba(119,120,123,.15);background:transparent;cursor:pointer;text-align:left;font-size:13px">
+                <span style="flex:1;font-weight:700">{{ m.name }}</span>
+                <sc-if value="{{ m.loss }}"><span style="font-size:11px;font-weight:700;padding:2px 8px;border:1px solid #070707;border-radius:999px">Loss</span></sc-if>
+                <span style="min-width:80px;text-align:right;font-weight:700;color:{{ m.color }}">{{ m.margin }}</span>
+              </button>
+            </sc-for>
+            <sc-if value="{{ marginEmpty }}"><p style="font-size:13px;color:#77787B;margin:0">No finance access on any client.</p></sc-if>
+          </section>
+          <section style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;padding:20px">
+            <h2 style="margin:0 0 12px;font-size:15px">Team load, September</h2>
+            <sc-for list="{{ load }}" as="p" hint-placeholder-count="5">
+              <button onClick="{{ p.go }}" style="display:flex;width:100%;align-items:center;gap:12px;padding:9px 0;border:0;border-top:1px solid rgba(119,120,123,.15);background:transparent;cursor:pointer;text-align:left;font-size:13px">
+                <span style="width:30px;height:30px;border-radius:4px;background:rgba(27,153,143,.12);color:#104943;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">{{ p.ini }}</span>
+                <span style="flex:1;min-width:0"><span style="display:block;font-weight:700">{{ p.name }}</span><span style="font-size:12px;color:#77787B">{{ p.detail }}</span></span>
+                <sc-if value="{{ p.over }}"><span style="font-size:11px;font-weight:700;padding:2px 8px;background:#104943;color:#fff;border-radius:999px">Over 60h</span></sc-if>
+                <span style="font-weight:700;min-width:44px;text-align:right">{{ p.hours }}</span>
+              </button>
+            </sc-for>
+          </section>
+          <section style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;padding:20px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:12px"><h2 style="margin:0;font-size:15px">Recent changes</h2><a href="#" onClick="{{ goAudit }}" style="font-size:12px;font-weight:700">Audit trail</a></div>
+            <sc-for list="{{ recentAudit }}" as="a" hint-placeholder-count="5">
+              <div style="padding:10px 0;border-top:1px solid rgba(119,120,123,.15);font-size:13px;line-height:1.45">
+                <div><strong>{{ a.who }}</strong> {{ a.text }}</div>
+                <div style="font-size:12px;color:#77787B">{{ a.target }} · {{ a.at }}</div>
+              </div>
+            </sc-for>
+          </section>
+        </div>
+      </sc-if>
+
+      <!-- CLIENTS -->
+      <sc-if value="{{ is.clients }}">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px">
+          <sc-for list="{{ brandChips }}" as="c">
+            <button onClick="{{ c.go }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};font-size:12px;font-weight:700;cursor:pointer">{{ c.label }}</button>
+          </sc-for>
+          <span style="flex:1"></span>
+          <label style="font-size:12px;color:#77787B;display:flex;align-items:center;gap:8px">Sort
+            <select value="{{ sort }}" onChange="{{ onSort }}" style="height:34px;padding:0 10px;border:1px solid rgba(119,120,123,.3);border-radius:8px;background:#fff;font-size:12px">
+              <option value="margin">Margin, lowest first</option>
+              <option value="cost">Cost, highest first</option>
+              <option value="name">Name</option>
+            </select>
+          </label>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;overflow:hidden">
+          <sc-if value="{{ isWide }}">
+            <div style="display:grid;grid-template-columns:minmax(0,2fr) repeat(4,minmax(0,1fr));gap:12px;padding:12px 20px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#77787B;border-bottom:1px solid rgba(119,120,123,.2)">
+              <span>Client</span><span style="text-align:right">Retainer</span><span style="text-align:right">Cost, Sep</span><span style="text-align:right">Margin</span><span style="text-align:right">Hours</span>
+            </div>
+          </sc-if>
+          <sc-for list="{{ clientRows }}" as="c" hint-placeholder-count="8">
+            <button onClick="{{ c.go }}" style="display:grid;grid-template-columns:{{ L.clientCols }};gap:6px 12px;align-items:center;width:100%;padding:{{ L.rowPad }} 20px;border:0;border-bottom:1px solid rgba(119,120,123,.12);background:transparent;cursor:pointer;text-align:left;font-size:13px" style-hover="background:rgba(27,153,143,.06)">
+              <span style="display:flex;align-items:center;gap:12px;min-width:0;grid-column:{{ L.nameSpan }}">
+                <span style="width:34px;height:34px;border-radius:4px;background:#104943;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">{{ c.ini }}</span>
+                <span style="min-width:0"><span style="display:block;font-weight:700">{{ c.name }}</span><span style="font-size:12px;color:#77787B">{{ c.brand }} · {{ c.access }}</span></span>
+              </span>
+              <span style="text-align:{{ L.numAlign }};color:{{ c.finColor }}"><sc-if value="{{ isNarrow }}"><span style="font-size:11px;color:#77787B;display:block">Retainer</span></sc-if>{{ c.retainer }}</span>
+              <span style="text-align:{{ L.numAlign }};color:{{ c.finColor }}"><sc-if value="{{ isNarrow }}"><span style="font-size:11px;color:#77787B;display:block">Cost</span></sc-if>{{ c.cost }}</span>
+              <span style="text-align:{{ L.numAlign }};font-weight:700;color:{{ c.marginColor }}"><sc-if value="{{ isNarrow }}"><span style="font-size:11px;color:#77787B;display:block;font-weight:400">Margin</span></sc-if>{{ c.margin }}</span>
+              <span style="text-align:{{ L.numAlign }}"><sc-if value="{{ isNarrow }}"><span style="font-size:11px;color:#77787B;display:block">Hours</span></sc-if>{{ c.hours }}</span>
+            </button>
+          </sc-for>
+          <sc-if value="{{ clientsEmpty }}"><div style="padding:32px 20px;font-size:13px;color:#77787B">No clients match. You only see clients you have been granted access to.</div></sc-if>
+        </div>
+        <p style="font-size:12px;color:#77787B;margin:12px 2px 0">Cost is September expenses plus logged hours at the internal rate of ₹1,800 an hour.</p>
+      </sc-if>
+
+      <!-- CLIENT DETAIL -->
+      <sc-if value="{{ is.client }}">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+          <span style="width:52px;height:52px;border-radius:8px;background:linear-gradient(135deg,#104943,#1B998F);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">{{ cd.ini }}</span>
+          <div style="flex:1;min-width:200px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(27,153,143,.12);color:#104943">{{ cd.brand }}</span>
+              <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid rgba(119,120,123,.35);color:#070707">Your access: {{ cd.access }}</span>
+            </div>
+            <div style="font-size:13px;color:#77787B;margin-top:6px">Client since {{ cd.since }} · Main contact {{ cd.contact }}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+          <sc-for list="{{ cd.stats }}" as="s" hint-placeholder-count="4">
+            <div style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;padding:14px 16px">
+              <div style="font-size:12px;color:#77787B">{{ s.label }}</div>
+              <div style="font-family:Perpetua,Georgia,serif;font-size:30px;margin-top:4px;color:{{ s.color }}">{{ s.value }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:4px;margin:24px 0 16px;border-bottom:1px solid rgba(119,120,123,.2);overflow-x:auto">
+          <sc-for list="{{ cd.tabs }}" as="t" hint-placeholder-count="5">
+            <button onClick="{{ t.go }}" style="padding:10px 14px;border:0;border-bottom:2px solid {{ t.line }};background:transparent;font-weight:700;font-size:13px;color:{{ t.fg }};cursor:pointer;white-space:nowrap;margin-bottom:-1px">{{ t.label }}</button>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ cdTab.overview }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px">
+            <section style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;padding:20px">
+              <h2 style="margin:0 0 12px;font-size:15px">Who worked on them</h2>
+              <sc-for list="{{ cd.workers }}" as="w">
+                <div style="display:flex;flex-direction:column;gap:6px;padding:8px 0">
+                  <div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:700">{{ w.name }}</span><span>{{ w.hours }}</span></div>
+                  <div style="height:6px;background:rgba(27,153,143,.1);border-radius:2px"><div style="height:100%;width:{{ w.pct }};background:#1B998F;border-radius:2px"></div></div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ cd.noWorkers }}"><p style="font-size:13px;color:#77787B;margin:0">No hours logged this month.</p></sc-if>
+            </section>
+            <section style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;padding:20px">
+              <h2 style="margin:0 0 12px;font-size:15px">People and relationships</h2>
+              <sc-for list="{{ cd.people }}" as="p">
+                <button onClick="{{ p.go }}" style="display:flex;width:100%;align-items:center;gap:12px;padding:9px 0;border:0;border-top:1px solid rgba(119,120,123,.15);background:transparent;cursor:pointer;text-align:left;font-size:13px">
+                  <span style="width:30px;height:30px;border-radius:4px;background:rgba(27,153,143,.12);color:#104943;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">{{ p.ini }}</span>
+                  <span style="flex:1;min-width:0"><span style="display:block;font-weight:700">{{ p.name }}</span><span style="font-size:12px;color:#77787B">{{ p.rel }}</span></span>
+                </button>
+              </sc-for>
+            </section>
+            <section style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;padding:20px">
+              <h2 style="margin:0 0 12px;font-size:15px">Open tasks</h2>
+              <sc-for list="{{ cd.openTasks }}" as="t">
+                <button onClick="{{ t.go }}" style="display:flex;width:100%;gap:10px;align-items:center;padding:9px 0;border:0;border-top:1px solid rgba(119,120,123,.15);background:transparent;cursor:pointer;text-align:left;font-size:13px">
+                  <span style="flex:1;font-weight:700">{{ t.title }}</span><span style="font-size:12px;color:#77787B;white-space:nowrap">{{ t.status }} · {{ t.due }}</span>
+                </button>
+              </sc-for>
+              <sc-if value="{{ cd.noOpen }}"><p style="font-size:13px;color:#77787B;margin:0">Nothing open.</p></sc-if>
+            </section>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ cdTab.expenses }}">
+          <sc-if value="{{ cd.canFin }}">
+            <div style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;overflow:hidden">
+              <sc-for list="{{ cd.expenses }}" as="e">
+                <button onClick="{{ e.go }}" style="display:flex;flex-wrap:wrap;gap:4px 16px;align-items:center;width:100%;padding:{{ L.rowPad }} 20px;border:0;border-bottom:1px solid rgba(119,120,123,.12);background:transparent;text-align:left;cursor:pointer;font-size:13px" style-hover="background:rgba(27,153,143,.06)">
+                  <span style="flex:1 1 220px;min-width:0"><span style="display:block;font-weight:700">{{ e.desc }}</span><span style="font-size:12px;color:#77787B">{{ e.date }} · {{ e.cat }} · {{ e.by }}</span></span>
+                  <span style="font-weight:700">{{ e.amount }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ cd.noFin }}">
+            <div style="display:flex;gap:12px;align-items:center;padding:24px;background:#fff;border:1px dashed rgba(119,120,123,.4);border-radius:8px;font-size:13px"><svg width="22" height="22"><use href="assets/icons/cubane-icons.svg#cb-lock"></use></svg>Finance access is required to see this client's expenses. Ask the founder for a Finance grant.</div>
+          </sc-if>
+        </sc-if>
+
+        <sc-if value="{{ cdTab.tasks }}">
+          <div style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;overflow:hidden">
+            <sc-for list="{{ cd.tasks }}" as="t">
+              <button onClick="{{ t.go }}" style="display:flex;flex-wrap:wrap;gap:4px 16px;align-items:center;width:100%;padding:{{ L.rowPad }} 20px;border:0;border-bottom:1px solid rgba(119,120,123,.12);background:transparent;text-align:left;cursor:pointer;font-size:13px" style-hover="background:rgba(27,153,143,.06)">
+                <span style="flex:1 1 220px;font-weight:700">{{ t.title }}</span>
+                <span style="font-size:12px;color:#77787B">{{ t.who }} · {{ t.hours }} · due {{ t.due }}</span>
+                <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:{{ t.sBg }};color:{{ t.sFg }}">{{ t.status }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ cdTab.access }}">
+          <section style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;padding:20px">
+            <h2 style="margin:0 0 4px;font-size:15px">Who has access to {{ cd.name }}</h2>
+            <p style="margin:0 0 16px;font-size:13px;color:#77787B">{{ cd.finSummary }}</p>
+            <sc-for list="{{ cd.accessRows }}" as="a">
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0;border-top:1px solid rgba(119,120,123,.15);font-size:13px">
+                <span style="width:30px;height:30px;border-radius:4px;background:rgba(27,153,143,.12);color:#104943;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">{{ a.ini }}</span>
+                <span style="flex:1;min-width:120px"><span style="display:block;font-weight:700">{{ a.name }}</span><span style="font-size:12px;color:#77787B">{{ a.role }}</span></span>
+                <select value="{{ a.level }}" onChange="{{ a.onChange }}" disabled="{{ a.locked }}" style="height:36px;padding:0 10px;border:1px solid rgba(119,120,123,.3);border-radius:8px;background:#fff;font-size:13px;min-width:130px">
+                  <option value="owner">Owner</option><option value="none">No access</option><option value="view">View</option><option value="edit">Edit</option><option value="finance">Finance</option>
+                </select>
+              </div>
+            </sc-for>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{ cdTab.history }}">
+          <div style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;padding:4px 20px">
+            <sc-for list="{{ cd.history }}" as="a">
+              <div style="display:flex;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid rgba(119,120,123,.12);font-size:13px">
+                <span style="flex:1 1 260px"><strong>{{ a.who }}</strong> {{ a.text }}<sc-if value="{{ a.hasDiff }}"><span style="display:block;font-size:12px;color:#77787B;margin-top:2px">{{ a.from }} → <strong style="color:#104943">{{ a.to }}</strong></span></sc-if></span>
+                <span style="font-size:12px;color:#77787B">{{ a.at }}</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ cd.noHistory }}"><p style="font-size:13px;color:#77787B">No recorded changes yet.</p></sc-if>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <!-- PEOPLE -->
+      <sc-if value="{{ is.people }}">
+        <p style="margin:0 0 16px;font-size:13px;color:#77787B;max-width:68ch">Each person exists once. Every role they hold, investor, introducer, partner or team member, is a relationship on the same record.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:12px">
+          <sc-for list="{{ peopleCards }}" as="p" hint-placeholder-count="8">
+            <button onClick="{{ p.go }}" style="display:flex;flex-direction:column;gap:12px;padding:18px;background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;cursor:pointer;text-align:left;transition:border-color 120ms" style-hover="border-color:#1B998F">
+              <span style="display:flex;gap:12px;align-items:center">
+                <span style="width:38px;height:38px;border-radius:4px;background:{{ p.avBg }};color:{{ p.avFg }};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ p.ini }}</span>
+                <span><span style="display:block;font-weight:700;font-size:14px">{{ p.name }}</span><span style="font-size:12px;color:#77787B">{{ p.sub }}</span></span>
+              </span>
+              <span style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ p.rels }}" as="r"><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(27,153,143,.1);color:#104943">{{ r }}</span></sc-for>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- EXPENSES -->
+      <sc-if value="{{ is.expenses }}">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px">
+          <sc-for list="{{ expBrandChips }}" as="c">
+            <button onClick="{{ c.go }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};font-size:12px;font-weight:700;cursor:pointer">{{ c.label }}</button>
+          </sc-for>
+          <select value="{{ expMonth }}" onChange="{{ onExpMonth }}" style="height:34px;padding:0 10px;border:1px solid rgba(119,120,123,.3);border-radius:8px;background:#fff;font-size:12px">
+            <option value="all">July to September</option><option value="9">September</option><option value="8">August</option><option value="7">July</option>
+          </select>
+          <span style="flex:1"></span>
+          <span style="font-size:13px"><span style="color:#77787B">{{ expCount }} · </span><strong>{{ expTotal }}</strong></span>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;overflow:hidden">
+          <sc-for list="{{ expRows }}" as="e" hint-placeholder-count="8">
+            <button onClick="{{ e.go }}" style="display:flex;flex-wrap:wrap;gap:4px 16px;align-items:center;width:100%;padding:{{ L.rowPad }} 20px;border:0;border-bottom:1px solid rgba(119,120,123,.12);background:transparent;text-align:left;cursor:pointer;font-size:13px" style-hover="background:rgba(27,153,143,.06)">
+              <span style="width:46px;font-size:12px;color:#77787B">{{ e.date }}</span>
+              <span style="flex:1 1 200px;min-width:0"><span style="display:block;font-weight:700">{{ e.desc }}</span><span style="font-size:12px;color:#77787B">{{ e.client }} · {{ e.cat }} · {{ e.by }}</span></span>
+              <span style="font-weight:700;min-width:90px;text-align:right">{{ e.amount }}</span>
+            </button>
+          </sc-for>
+          <sc-if value="{{ expEmpty }}"><div style="padding:32px 20px;font-size:13px;color:#77787B">No expenses you can see for this filter. Expenses show only for clients where you hold Finance access.</div></sc-if>
+        </div>
+      </sc-if>
+
+      <!-- TASKS -->
+      <sc-if value="{{ is.tasks }}">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+          <sc-for list="{{ assigneeChips }}" as="c">
+            <button onClick="{{ c.go }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};font-size:12px;font-weight:700;cursor:pointer">{{ c.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:{{ L.boardCols }};gap:12px;overflow-x:auto;padding-bottom:8px">
+          <sc-for list="{{ board }}" as="col" hint-placeholder-count="4">
+            <div onDragOver="{{ allowDrop }}" onDrop="{{ col.onDrop }}" style="display:flex;flex-direction:column;gap:8px;padding:12px;min-height:200px;border-radius:8px;background:{{ col.bg }};border:1px dashed {{ col.border }};min-width:0">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:2px 4px 6px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#104943"><span>{{ col.label }}</span><span style="color:#77787B">{{ col.count }}</span></div>
+              <sc-for list="{{ col.cards }}" as="t">
+                <div draggable="true" onDragStart="{{ t.onDrag }}" onDragEnd="{{ endDrag }}" onClick="{{ t.go }}" style="padding:14px;background:#fff;border:1px solid rgba(119,120,123,.22);border-radius:8px;cursor:grab;display:flex;flex-direction:column;gap:8px;font-size:13px;transition:border-color 120ms" style-hover="border-color:#1B998F">
+                  <span style="font-weight:700;line-height:1.35">{{ t.title }}</span>
+                  <span style="font-size:12px;color:#77787B">{{ t.client }}</span>
+                  <span style="display:flex;align-items:center;gap:8px;font-size:12px">
+                    <span style="width:24px;height:24px;border-radius:4px;background:rgba(27,153,143,.12);color:#104943;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">{{ t.ini }}</span>
+                    <span style="flex:1;color:#77787B">{{ t.hours }}</span>
+                    <span style="color:#77787B">{{ t.due }}</span>
+                  </span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <p style="font-size:12px;color:#77787B;margin:8px 2px 0">Drag a card between columns, or open it to edit. Every save is confirmed by the database before it shows here.</p>
+      </sc-if>
+
+      <!-- ACCESS -->
+      <sc-if value="{{ is.access }}">
+        <sc-if value="{{ isOwner }}">
+          <p style="margin:0 0 16px;font-size:13px;color:#77787B;max-width:68ch">Grants are per person, per client, and enforced in every query. Click a cell to step through No access, View, Edit and Finance.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:16px;font-size:12px">
+            <sc-for list="{{ legend }}" as="l"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:3px;background:{{ l.bg }};border:1px solid {{ l.border }}"></span>{{ l.label }}</span></sc-for>
+          </div>
+          <div style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;overflow-x:auto">
+            <table style="border-collapse:collapse;width:100%;min-width:860px;font-size:12px">
+              <thead><tr>
+                <th style="text-align:left;padding:12px 16px;position:sticky;left:0;background:#fff;border-bottom:1px solid rgba(119,120,123,.2);min-width:170px">Person</th>
+                <sc-for list="{{ matrixCols }}" as="c"><th style="padding:12px 6px;font-weight:700;border-bottom:1px solid rgba(119,120,123,.2);text-align:center">{{ c }}</th></sc-for>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ matrix }}" as="r">
+                  <tr>
+                    <td style="padding:10px 16px;position:sticky;left:0;background:#fff;border-bottom:1px solid rgba(119,120,123,.12)"><span style="display:block;font-weight:700;font-size:13px">{{ r.name }}</span><span style="color:#77787B">{{ r.role }}</span></td>
+                    <sc-for list="{{ r.cells }}" as="c">
+                      <td style="padding:6px;border-bottom:1px solid rgba(119,120,123,.12);text-align:center">
+                        <button onClick="{{ c.go }}" disabled="{{ c.locked }}" style="width:100%;min-width:74px;height:34px;border-radius:6px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};font-size:11px;font-weight:700;cursor:{{ c.cursor }};transition:background 120ms">{{ c.label }}</button>
+                      </td>
+                    </sc-for>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </sc-if>
+        <sc-if value="{{ notOwner }}">
+          <div style="display:flex;gap:12px;align-items:center;padding:24px;background:#fff;border:1px dashed rgba(119,120,123,.4);border-radius:8px;font-size:13px"><svg width="22" height="22"><use href="assets/icons/cubane-icons.svg#cb-key"></use></svg>Only the founder can change access. Your grants are listed on each client's Access tab.</div>
+        </sc-if>
+      </sc-if>
+
+      <!-- AUDIT -->
+      <sc-if value="{{ is.audit }}">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+          <sc-for list="{{ auditChips }}" as="c">
+            <button onClick="{{ c.go }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};font-size:12px;font-weight:700;cursor:pointer">{{ c.label }}</button>
+          </sc-for>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(119,120,123,.2);border-radius:8px;padding:4px 20px">
+          <sc-for list="{{ auditRows }}" as="a" hint-placeholder-count="6">
+            <div style="display:flex;gap:14px;padding:14px 0;border-bottom:1px solid rgba(119,120,123,.12);font-size:13px;line-height:1.45">
+              <span style="width:32px;height:32px;border-radius:4px;background:rgba(27,153,143,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18"><use href="{{ a.icon }}"></use></svg></span>
+              <span style="flex:1;min-width:0">
+                <span style="display:block"><strong>{{ a.who }}</strong> {{ a.text }}</span>
+                <sc-if value="{{ a.hasDiff }}"><span style="display:inline-flex;gap:8px;align-items:center;margin-top:4px;font-size:12px;padding:3px 10px;border-radius:4px;background:rgba(27,153,143,.07)"><span style="color:#77787B;text-decoration:line-through">{{ a.from }}</span><span>→</span><strong style="color:#104943">{{ a.to }}</strong></span></sc-if>
+                <span style="display:block;font-size:12px;color:#77787B;margin-top:4px">{{ a.target }} · {{ a.at }}</span>
+              </span>
+            </div>
+          </sc-for>
+        </div>
+        <p style="font-size:12px;color:#77787B;margin:12px 2px 0">Entries are append-only and attributed. They cannot be edited from the interface.</p>
+      </sc-if>
+    </div>
+  </main>
+
+  <!-- TASK / PERSON DRAWER -->
+  <sc-if value="{{ drawerOpen }}">
+    <div onClick="{{ closeDrawer }}" style="position:fixed;inset:0;background:rgba(7,7,7,.35);z-index:40"></div>
+    <aside style="position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:#fff;z-index:41;display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(16,73,67,.15);animation:opRise 200ms ease">
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:20px 24px;border-bottom:1px solid rgba(119,120,123,.2)">
+        <div style="flex:1;min-width:0"><div style="font-size:12px;color:#77787B">{{ dr.kicker }}</div><h2 style="margin:4px 0 0;font-size:18px;line-height:1.3">{{ dr.title }}</h2></div>
+        <button onClick="{{ closeDrawer }}" aria-label="Close" style="width:44px;height:44px;border:1px solid rgba(119,120,123,.3);border-radius:8px;background:#fff;cursor:pointer;font-size:18px">×</button>
+      </div>
+      <div style="flex:1;overflow:auto;padding:20px 24px;display:flex;flex-direction:column;gap:18px">
+        <sc-if value="{{ dr.isTask }}">
+          <sc-if value="{{ dr.readOnly }}"><div style="font-size:12px;padding:10px 12px;border-radius:6px;background:rgba(27,153,143,.08)">You have View access on {{ dr.client }}. Editing is disabled.</div></sc-if>
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:700">Status</span>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border-radius:8px;background:rgba(119,120,123,.1)">
+              <sc-for list="{{ dr.statuses }}" as="s"><button onClick="{{ s.go }}" disabled="{{ dr.readOnly }}" style="height:36px;border:0;border-radius:6px;background:{{ s.bg }};color:{{ s.fg }};font-size:12px;font-weight:700;cursor:pointer">{{ s.label }}</button></sc-for>
+            </div>
+          </div>
+          <label style="display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:700">Assignee
+            <select name="who" value="{{ draft.who }}" onChange="{{ onDraft }}" disabled="{{ dr.readOnly }}" style="height:42px;padding:0 12px;border:1px solid rgba(119,120,123,.3);border-radius:8px;background:#fff;font-size:14px;font-weight:400">
+              <sc-for list="{{ teamList }}" as="o"><option value="{{ o.id }}">{{ o.name }}</option></sc-for>
+            </select>
+          </label>
+          <label style="display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:700">Hours logged this month
+            <input name="hours" type="number" min="0" value="{{ draft.hours }}" onChange="{{ onDraft }}" disabled="{{ dr.readOnly }}" style="height:42px;padding:0 12px;border:1px solid rgba(119,120,123,.3);border-radius:8px;font-size:14px;font-weight:400">
+          </label>
+          <div style="font-size:13px;color:#77787B;line-height:1.6">Client <a href="#" onClick="{{ dr.goClient }}">{{ dr.client }}</a> · Due {{ dr.due }}</div>
+        </sc-if>
+        <sc-if value="{{ dr.isPerson }}">
+          <div style="display:flex;flex-direction:column;gap:0">
+            <span style="font-size:12px;font-weight:700;margin-bottom:6px">Relationships</span>
+            <sc-for list="{{ dr.rels }}" as="r">
+              <div style="display:flex;gap:12px;padding:12px 0;border-top:1px solid rgba(119,120,123,.15);font-size:13px">
+                <span style="font-size:11px;font-weight:700;padding:3px 10px;height:fit-content;border-radius:999px;background:#104943;color:#fff;white-space:nowrap">{{ r.type }}</span>
+                <span style="flex:1">{{ r.detail }}<sc-if value="{{ r.hasClient }}"><span style="display:block;margin-top:2px"><a href="#" onClick="{{ r.go }}">{{ r.client }}</a></span></sc-if></span>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ dr.hasGrants }}">
+            <div><span style="font-size:12px;font-weight:700">Client access</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><sc-for list="{{ dr.grants }}" as="g"><span style="font-size:11px;padding:4px 10px;border-radius:999px;border:1px solid rgba(119,120,123,.35)">{{ g }}</span></sc-for></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ dr.hasTasks }}">
+            <div><span style="font-size:12px;font-weight:700">Open tasks</span>
+              <sc-for list="{{ dr.tasks }}" as="t"><button onClick="{{ t.go }}" style="display:flex;width:100%;justify-content:space-between;gap:8px;padding:10px 0;border:0;border-bottom:1px solid rgba(119,120,123,.12);background:transparent;cursor:pointer;text-align:left;font-size:13px"><span style="font-weight:700">{{ t.title }}</span><span style="color:#77787B;font-size:12px;white-space:nowrap">{{ t.client }}</span></button></sc-for>
+            </div>
+          </sc-if>
+        </sc-if>
+      </div>
+      <sc-if value="{{ dr.isTask }}">
+        <div style="display:flex;gap:8px;align-items:center;padding:16px 24px;border-top:1px solid rgba(119,120,123,.2)">
+          <span style="flex:1;font-size:12px;color:#77787B">{{ saveNote }}</span>
+          <button onClick="{{ closeDrawer }}" style="height:42px;padding:0 18px;border-radius:999px;border:1px solid rgba(119,120,123,.35);background:#fff;font-weight:700;font-size:13px;cursor:pointer">Cancel</button>
+          <button onClick="{{ saveTask }}" disabled="{{ saveDisabled }}" style="height:42px;padding:0 20px;border-radius:999px;border:0;background:{{ saveBg }};color:#fff;font-weight:700;font-size:13px;cursor:pointer" style-hover="background:#22A99E">{{ saveLabel }}</button>
+        </div>
+      </sc-if>
+    </aside>
+  </sc-if>
+
+  <!-- MODAL -->
+  <sc-if value="{{ modalOpen }}">
+    <div style="position:fixed;inset:0;background:rgba(7,7,7,.45);z-index:50;display:flex;align-items:{{ L.modalAlign }};justify-content:center;padding:{{ L.modalPad }}" onClick="{{ closeModal }}">
+      <form onSubmit="{{ submitModal }}" onClick="{{ stop }}" style="width:100%;max-width:480px;max-height:100%;overflow:auto;background:#fff;border-radius:{{ L.modalRadius }};padding:24px;display:flex;flex-direction:column;gap:16px;animation:opRise 200ms ease">
+        <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:18px">{{ md.title }}</h2><button type="button" onClick="{{ closeModal }}" aria-label="Close" style="width:40px;height:40px;border:0;background:transparent;font-size:20px;cursor:pointer">×</button></div>
+        <sc-for list="{{ md.fields }}" as="f">
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700">{{ f.label }}
+            <sc-if value="{{ f.isSelect }}">
+              <select name="{{ f.name }}" value="{{ f.value }}" onChange="{{ onField }}" style="height:44px;padding:0 12px;border:1px solid {{ f.border }};border-radius:8px;background:#fff;font-size:14px;font-weight:400">
+                <sc-for list="{{ f.options }}" as="o"><option value="{{ o.id }}">{{ o.name }}</option></sc-for>
+              </select>
+            </sc-if>
+            <sc-if value="{{ f.isInput }}">
+              <input name="{{ f.name }}" type="{{ f.type }}" value="{{ f.value }}" onChange="{{ onField }}" placeholder="{{ f.ph }}" style="height:44px;padding:0 12px;border:1px solid {{ f.border }};border-radius:8px;font-size:14px;font-weight:400">
+            </sc-if>
+            <sc-if value="{{ f.hasError }}"><span style="font-weight:400;color:#070707;display:flex;gap:6px;align-items:center"><span style="width:6px;height:6px;background:#070707"></span>{{ f.error }}</span></sc-if>
+          </label>
+        </sc-for>
+        <sc-if value="{{ md.hasNote }}"><div style="font-size:12px;color:#77787B;padding:10px 12px;border-radius:6px;background:rgba(27,153,143,.07)">{{ md.note }}</div></sc-if>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+          <button type="button" onClick="{{ closeModal }}" style="height:44px;padding:0 18px;border-radius:999px;border:1px solid rgba(119,120,123,.35);background:#fff;font-weight:700;font-size:13px;cursor:pointer">Cancel</button>
+          <button type="submit" style="height:44px;padding:0 22px;border-radius:999px;border:0;background:#1B998F;color:#fff;font-weight:700;font-size:13px;cursor:pointer" style-hover="background:#22A99E">{{ md.submit }}</button>
+        </div>
+      </form>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toastOn }}">
+    <div style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:999px;background:#104943;color:#fff;font-size:13px;box-shadow:0 8px 24px rgba(7,7,7,.2);animation:opRise 200ms ease;max-width:calc(100% - 32px);--icon-stroke:#fff;--icon-accent:#1B998F">
+      <svg width="18" height="18" style="flex-shrink:0"><use href="assets/icons/cubane-icons.svg#cb-check"></use></svg><span>{{ toast }}</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startView&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dashboard&quot;,&quot;clients&quot;,&quot;people&quot;,&quot;expenses&quot;,&quot;tasks&quot;,&quot;access&quot;,&quot;audit&quot;],&quot;default&quot;:&quot;dashboard&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;comfortable&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;sidebarTone&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const I = id => 'assets/icons/cubane-icons.svg#cb-' + id;
+const RATE = 1800;
+const BRANDS = [{id:'hep',name:'Hephaestus Studio'},{id:'kln',name:'Kiln'},{id:'ntg',name:'Northgate'},{id:'tlw',name:'Tallow'}];
+const CLIENTS = [
+  {id:'arc3',name:'ARC3',brand:'hep',retainer:420000,since:'Mar 2026',contact:'Karan Shah'},
+  {id:'mer',name:'Meridian Foods',brand:'kln',retainer:180000,since:'Nov 2024',contact:'Meera Iyer'},
+  {id:'sah',name:'Sahyadri Logistics',brand:'ntg',retainer:240000,since:'Jun 2025',contact:'Aditi Kulkarni'},
+  {id:'oak',name:'Oakline Clinics',brand:'hep',retainer:150000,since:'Jan 2026',contact:'Dr Nikhil Bose'},
+  {id:'lum',name:'Lumen Schools',brand:'tlw',retainer:95000,since:'Apr 2026',contact:'Farah Khan'},
+  {id:'par',name:'Parcel & Co',brand:'kln',retainer:120000,since:'Aug 2025',contact:'Ishaan Verma'},
+  {id:'riv',name:'Riverbed Hotels',brand:'ntg',retainer:210000,since:'Feb 2025',contact:'Leela Menon'},
+  {id:'tes',name:'Tessera Finance',brand:'tlw',retainer:160000,since:'Jul 2026',contact:'Omar Siddiqui'}];
+const PEOPLE = [
+  {id:'p1',name:'Arjun Mehta',team:true,role:'Founder',rels:[{type:'Founder',detail:'Owns all four brands and every client record'}]},
+  {id:'p2',name:'Priya Nair',team:true,role:'Operations lead',rels:[{type:'Team',detail:'Operations lead, since 2024'}]},
+  {id:'p3',name:'Rohan Das',team:true,role:'Designer',rels:[{type:'Team',detail:'Senior designer'}]},
+  {id:'p4',name:'Sana Kapoor',team:true,role:'Finance',rels:[{type:'Team',detail:'Finance and reconciliation'}]},
+  {id:'p5',name:'Dev Malhotra',team:true,role:'Developer',rels:[{type:'Team',detail:'Full-stack developer'}]},
+  {id:'p6',name:'Vikram Rao',role:'External',rels:[{type:'Investor',detail:'Angel investor in Hephaestus Studio, 2025'},{type:'Introducer',detail:'Introduced ARC3 in March 2026',client:'arc3'},{type:'Advisor',detail:'Advises Northgate on logistics clients',client:'sah'}]},
+  {id:'p7',name:'Meera Iyer',role:'External',rels:[{type:'Client contact',detail:'Head of brand',client:'mer'},{type:'Partner',detail:'Co-marketing partner for Kiln'}]},
+  {id:'p8',name:'Karan Shah',role:'External',rels:[{type:'Client contact',detail:'Marketing director',client:'arc3'}]}];
+const EXP0 = [
+  ['e1',9,26,'Figma organisation seats','arc3','Software',38000,'p4'],['e2',9,24,'Photography, Q4 campaign shoot','arc3','Production',96000,'p2'],
+  ['e3',9,22,'Cloud hosting, September','sah','Infrastructure',42000,'p5'],['e4',9,20,'Print run, menu cards','mer','Production',64000,'p2'],
+  ['e19',9,19,'Media buy, September','oak','Media',45000,'p4'],['e5',9,18,'Freelance illustrator','lum','Contractors',72000,'p4'],
+  ['e6',9,15,'Travel, Pune site visit','sah','Travel',18500,'p2'],['e7',9,12,'Stock footage licence','oak','Software',24000,'p3'],
+  ['e8',9,10,'Contract developer, 40 hours','lum','Contractors',60000,'p4'],['e9',9,8,'Venue deposit, launch event','riv','Events',85000,'p2'],
+  ['e10',9,5,'Analytics tooling','tes','Software',21000,'p5'],['e11',9,3,'Packaging prototypes','par','Production',33000,'p3'],
+  ['e12',8,28,'Photography, spring menu','mer','Production',52000,'p2'],['e13',8,21,'Contract developer','oak','Contractors',88000,'p4'],
+  ['e14',8,14,'Cloud hosting, August','sah','Infrastructure',40000,'p5'],['e15',8,6,'Influencer fees','arc3','Media',150000,'p2'],
+  ['e16',7,30,'Media buy, July','riv','Media',120000,'p4'],['e17',7,18,'Brand audit contractor','tes','Contractors',70000,'p4'],
+  ['e18',7,9,'Signage fabrication','riv','Production',58000,'p2']
+].map(([id,m,d,desc,client,cat,amount,by])=>({id,m,d,desc,client,cat,amount,by}));
+const TASK0 = [
+  ['t1','Q4 campaign concepts','arc3','p3','doing',22,'3 Oct'],['t2','Retainer renewal terms','arc3','p1','review',6,'30 Sep'],
+  ['t3','Menu card print proofs','mer','p3','done',12,'19 Sep'],['t4','Route dashboard, phase 2','sah','p5','doing',34,'10 Oct'],
+  ['t5','Patient intake form redesign','oak','p3','doing',28,'6 Oct'],['t6','Clinic site migration','oak','p5','todo',22,'14 Oct'],
+  ['t7','Admissions microsite','lum','p5','doing',26,'8 Oct'],['t8','Parent newsletter template','lum','p3','todo',8,'12 Oct'],
+  ['t9','Launch event run sheet','riv','p2','doing',16,'4 Oct'],['t10','Vendor reconciliation, September','riv','p4','review',9,'1 Oct'],
+  ['t11','Investor update draft','tes','p1','todo',4,'7 Oct'],['t12','Compliance copy review','tes','p2','done',7,'25 Sep'],
+  ['t13','Packaging range shortlist','par','p3','review',10,'2 Oct'],['t14','Monthly spend report','mer','p4','todo',3,'5 Oct']
+].map(([id,title,client,who,status,hours,due])=>({id,title,client,who,status,hours,due}));
+const GRANTS0 = {};
+CLIENTS.forEach(c=>{ GRANTS0['p2:'+c.id]='edit'; GRANTS0['p4:'+c.id]='finance'; GRANTS0['p3:'+c.id]='none'; GRANTS0['p5:'+c.id]='none'; });
+Object.assign(GRANTS0,{'p2:arc3':'finance','p3:arc3':'edit','p3:mer':'edit','p3:oak':'edit','p3:par':'view','p3:lum':'view','p5:sah':'edit','p5:tes':'edit','p5:riv':'view','p5:oak':'edit','p5:lum':'edit'});
+const AUDIT0 = [
+  {id:'a1',at:'Today, 11:42',who:'Sana Kapoor',kind:'expense',text:'edited the amount on “Freelance illustrator”',target:'Lumen Schools',from:'₹64,000',to:'₹72,000'},
+  {id:'a2',at:'Today, 10:15',who:'Arjun Mehta',kind:'access',text:'changed access for Sana Kapoor',target:'Tessera Finance',from:'Edit',to:'Finance'},
+  {id:'a3',at:'Yesterday, 18:03',who:'Priya Nair',kind:'task',text:'moved “Retainer renewal terms”',target:'ARC3',from:'In progress',to:'Review'},
+  {id:'a4',at:'Yesterday, 16:20',who:'Priya Nair',kind:'expense',text:'added “Photography, Q4 campaign shoot”',target:'ARC3',from:'',to:'₹96,000'},
+  {id:'a5',at:'27 Sep, 12:48',who:'Dev Malhotra',kind:'task',text:'logged hours on “Route dashboard, phase 2”',target:'Sahyadri Logistics',from:'28h',to:'34h'},
+  {id:'a6',at:'26 Sep, 09:30',who:'Arjun Mehta',kind:'access',text:'changed access for Rohan Das',target:'Tessera Finance',from:'View',to:'No access'},
+  {id:'a7',at:'25 Sep, 17:12',who:'Priya Nair',kind:'task',text:'completed “Compliance copy review”',target:'Tessera Finance',from:'Review',to:'Done'}];
+const STATUS = [{id:'todo',label:'To do'},{id:'doing',label:'In progress'},{id:'review',label:'Review'},{id:'done',label:'Done'}];
+const LVL = {owner:'Owner',none:'No access',view:'View',edit:'Edit',finance:'Finance'};
+const LVL_STYLE = {
+  owner:{bg:'#070707',fg:'#fff',border:'#070707'}, none:{bg:'#fff',fg:'#77787B',border:'rgba(119,120,123,.3)'},
+  view:{bg:'rgba(27,153,143,.1)',fg:'#104943',border:'rgba(27,153,143,.3)'}, edit:{bg:'rgba(27,153,143,.3)',fg:'#104943',border:'rgba(27,153,143,.5)'},
+  finance:{bg:'#104943',fg:'#fff',border:'#104943'}};
+const CYCLE = {none:'view',view:'edit',edit:'finance',finance:'none'};
+const inr = n => (n<0?'−':'') + '₹' + Math.abs(Math.round(n)).toLocaleString('en-IN');
+const inrS = n => { const a=Math.abs(n), s=n<0?'−':''; return a>=100000 ? s+'₹'+(+(a/100000).toFixed(2))+'L' : s+'₹'+Math.round(a/1000)+'k'; };
+const ini = n => n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+const MON = {7:'Jul',8:'Aug',9:'Sep'};
+const now = () => { const d=new Date(); return 'Today, '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+const P = id => PEOPLE.find(p=>p.id===id);
+const C = id => CLIENTS.find(c=>c.id===id);
+const B = id => BRANDS.find(b=>b.id===id);
+
+class Component extends DCLogic {
+  state = { view:this.props.startView ?? 'dashboard', clientId:'arc3', tab:'overview', menuOpen:false, w:window.innerWidth,
+    viewAs:'p1', expenses:EXP0, tasks:TASK0, grants:GRANTS0, audit:AUDIT0, q:'', searchOpen:false,
+    brandFilter:'all', sort:'margin', expBrand:'all', expMonth:'all', assignee:'all', auditFilter:'all',
+    drawer:null, draft:{}, saving:false, modal:null, form:{}, errors:{}, toast:null, dragId:null, prevView:'dashboard' };
+  componentDidMount(){ this._r=()=>this.setState({w:window.innerWidth}); window.addEventListener('resize',this._r);
+    this._k=e=>{ if(e.key==='Escape') this.setState({drawer:null,modal:null,searchOpen:false,menuOpen:false}); }; window.addEventListener('keydown',this._k); }
+  componentWillUnmount(){ window.removeEventListener('resize',this._r); window.removeEventListener('keydown',this._k); clearTimeout(this._t); }
+
+  lvl(pid,cid){ return pid==='p1' ? 'owner' : (this.state.grants[pid+':'+cid]||'none'); }
+  can(cid,need){ const l=this.lvl(this.state.viewAs,cid); if(l==='owner') return true; const r={none:0,view:1,edit:2,finance:3}; return r[l]>=r[need]; }
+  go(view,extra){ this.setState({view,menuOpen:false,searchOpen:false,q:'',...(extra||{})}); const m=document.querySelector('main'); if(m) m.scrollTop=0; }
+  openClient(id,tab){ this.go('client',{clientId:id,tab:tab||'overview'}); }
+  log(e){ this.setState(s=>({audit:[{id:'a'+Date.now()+Math.random(),at:now(),who:P(s.viewAs).name,...e},...s.audit]})); }
+  toast(msg){ clearTimeout(this._t); this.setState({toast:msg}); this._t=setTimeout(()=>this.setState({toast:null}),3200); }
+  stats(c){ const s=this.state; const exp=s.expenses.filter(e=>e.client===c.id&&e.m===9).reduce((a,e)=>a+e.amount,0);
+    const hrs=s.tasks.filter(t=>t.client===c.id).reduce((a,t)=>a+(+t.hours||0),0); const cost=exp+hrs*RATE; return {exp,hrs,cost,margin:c.retainer-cost}; }
+  openTask(id){ const t=this.state.tasks.find(x=>x.id===id); this.setState({drawer:{type:'task',id},draft:{status:t.status,who:t.who,hours:t.hours},saving:false,searchOpen:false}); }
+  moveTask(id,status){ const t=this.state.tasks.find(x=>x.id===id); if(!t||t.status===status) return;
+    if(!this.can(t.client,'edit')){ this.toast('You have View access on '+C(t.client).name+'. Move not saved.'); return; }
+    const from=STATUS.find(x=>x.id===t.status).label, to=STATUS.find(x=>x.id===status).label;
+    this.setState(s=>({tasks:s.tasks.map(x=>x.id===id?{...x,status}:x)}));
+    this.log({kind:'task',text:'moved “'+t.title+'”',target:C(t.client).name,from,to}); this.toast('Moved to '+to+'. Saved and confirmed.'); }
+  openModal(type,data){ const s=this.state; let form;
+    const fin=CLIENTS.filter(c=>this.can(c.id,'finance')), ed=CLIENTS.filter(c=>this.can(c.id,'edit'));
+    if(type==='newExpense') form={desc:'',client:(s.view==='client'&&this.can(s.clientId,'finance'))?s.clientId:(fin[0]||{}).id||'',cat:'Software',amount:'',m:'9'};
+    if(type==='editExpense') form={...data,amount:String(data.amount)};
+    if(type==='newTask') form={title:'',client:(s.view==='client'&&this.can(s.clientId,'edit'))?s.clientId:(ed[0]||{}).id||'',who:s.viewAs,due:'',status:'todo'};
+    this.setState({modal:type,form,errors:{},drawer:null});
+  }
+  submit(){ const s=this.state,f=s.form,err={};
+    if(s.modal==='newExpense'||s.modal==='editExpense'){
+      if(!f.desc.trim()) err.desc='Add a short description.';
+      if(!f.client) err.client='Pick a client you hold Finance access on.';
+      const a=Number(String(f.amount).replace(/[,₹\s]/g,'')); if(!a||a<=0) err.amount='Enter an amount above zero, in rupees.';
+      if(Object.keys(err).length) return this.setState({errors:err});
+      if(s.modal==='newExpense'){ const e={id:'e'+Date.now(),m:+f.m,d:+f.m===9?30:28,desc:f.desc.trim(),client:f.client,cat:f.cat,amount:a,by:s.viewAs};
+        this.setState(x=>({expenses:[e,...x.expenses],modal:null})); this.log({kind:'expense',text:'added “'+e.desc+'”',target:C(e.client).name,from:'',to:inr(a)}); this.toast('Expense added and recorded in the audit trail.'); }
+      else { const old=s.expenses.find(e=>e.id===f.id);
+        this.setState(x=>({expenses:x.expenses.map(e=>e.id===f.id?{...e,desc:f.desc.trim(),cat:f.cat,amount:a}:e),modal:null}));
+        if(old.amount!==a) this.log({kind:'expense',text:'edited the amount on “'+old.desc+'”',target:C(old.client).name,from:inr(old.amount),to:inr(a)});
+        else if(old.desc!==f.desc.trim()||old.cat!==f.cat) this.log({kind:'expense',text:'edited “'+f.desc.trim()+'”',target:C(old.client).name,from:old.cat,to:f.cat});
+        this.toast('Changes saved. Previous value kept in history.'); }
+    } else if(s.modal==='newTask'){
+      if(!f.title.trim()) err.title='Give the task a title.'; if(!f.client) err.client='Pick a client you can edit.';
+      if(Object.keys(err).length) return this.setState({errors:err});
+      const t={id:'t'+Date.now(),title:f.title.trim(),client:f.client,who:f.who,status:'todo',hours:0,due:f.due||'No date'};
+      this.setState(x=>({tasks:[...x.tasks,t],modal:null})); this.log({kind:'task',text:'created “'+t.title+'”',target:C(t.client).name,from:'',to:'To do'}); this.toast('Task created.'); }
+  }
+  chip(active,label,go){ return {label,go,bg:active?'#104943':'#fff',fg:active?'#fff':'#070707',border:active?'#104943':'rgba(119,120,123,.3)'}; }
+
+  renderVals(){
+    const s=this.state, narrow=s.w<860, compact=(this.props.density??'comfortable')==='compact', dark=(this.props.sidebarTone??'dark')==='dark';
+    const viewer=P(s.viewAs), isOwner=s.viewAs==='p1';
+    const vis=CLIENTS.filter(c=>this.can(c.id,'view')), fin=vis.filter(c=>this.can(c.id,'finance'));
+    const visIds=new Set(vis.map(c=>c.id)), finIds=new Set(fin.map(c=>c.id));
+    const vTasks=s.tasks.filter(t=>visIds.has(t.client)), vExp=s.expenses.filter(e=>finIds.has(e.client));
+    const L={pad:narrow?'16px':'32px',rowPad:compact?'10px':'14px',clientCols:narrow?'1fr 1fr':'minmax(0,2fr) repeat(4,minmax(0,1fr))',nameSpan:narrow?'1 / -1':'auto',numAlign:narrow?'left':'right',
+      boardCols:narrow?'repeat(4,minmax(250px,1fr))':'repeat(4,minmax(0,1fr))',modalAlign:narrow?'flex-end':'center',modalPad:narrow?'0':'24px',modalRadius:narrow?'14px 14px 0 0':'14px'};
+    const sb={bg:dark?'#104943':'#fff',fg:dark?'#fff':'#070707',icon:dark?'#fff':'#104943',hover:dark?'rgba(255,255,255,.08)':'rgba(27,153,143,.08)',line:dark?'rgba(255,255,255,.18)':'rgba(119,120,123,.25)',inputBg:dark?'rgba(255,255,255,.06)':'#fff',
+      position:narrow?'fixed':'relative',transform:narrow&&!s.menuOpen?'translateX(-100%)':'none'};
+    const navDef=[['dashboard','Dashboard','grid',''],['clients','Clients','database',vis.length],['people','People','users',PEOPLE.length],['expenses','Expenses','doc',vExp.length],['tasks','Tasks','check',vTasks.filter(t=>t.status!=='done').length],['access','Access','key',''],['audit','Audit trail','shield',s.audit.length]];
+    const cur=s.view==='client'?'clients':s.view;
+    const nav=navDef.map(([id,label,icon,count])=>({label,count,icon:I(icon),go:()=>this.go(id),bg:cur===id?(dark?'rgba(255,255,255,.12)':'rgba(27,153,143,.1)'):'transparent',weight:cur===id?700:400}));
+
+    // search
+    const ql=s.q.trim().toLowerCase();
+    const results=ql?[...vis.filter(c=>c.name.toLowerCase().includes(ql)).map(c=>({name:c.name,kind:'Client · '+B(c.brand).name,go:()=>this.openClient(c.id)})),
+      ...PEOPLE.filter(p=>p.name.toLowerCase().includes(ql)).map(p=>({name:p.name,kind:'Person · '+p.rels.map(r=>r.type).join(', '),go:()=>this.setState({drawer:{type:'person',id:p.id},q:'',searchOpen:false})}))].slice(0,7):[];
+
+    // dashboard
+    const allStats=Object.fromEntries(CLIENTS.map(c=>[c.id,this.stats(c)]));
+    const qSpend=vExp.reduce((a,e)=>a+e.amount,0);
+    const unprof=fin.filter(c=>allStats[c.id].margin<0);
+    const kpis=[{label:'Spend, July to September',value:inrS(qSpend),note:vExp.length+' expenses across '+fin.length+' clients'},
+      {label:'Clients visible to you',value:vis.length+' of '+CLIENTS.length,note:isOwner?'Founder sees everything':'Set by your grants'},
+      {label:'Open tasks',value:String(vTasks.filter(t=>t.status!=='done').length),note:vTasks.filter(t=>t.status==='review').length+' waiting for review'},
+      {label:'Unprofitable this month',value:String(unprof.length),note:unprof.map(c=>c.name).join(', ')||'None'}];
+    const bs=BRANDS.map(b=>({b,v:vExp.filter(e=>C(e.client).brand===b.id).reduce((a,e)=>a+e.amount,0)})); const bsMax=Math.max(1,...bs.map(x=>x.v));
+    const brandSpend=bs.map(x=>({name:x.b.name,value:inr(x.v),pct:(x.v/bsMax*100)+'%',go:()=>this.go('expenses',{expBrand:x.b.id})}));
+    const bh=BRANDS.map(b=>({b,v:vTasks.filter(t=>C(t.client).brand===b.id).reduce((a,t)=>a+(+t.hours||0),0)})); const bhMax=Math.max(1,...bh.map(x=>x.v));
+    const brandHours=bh.map(x=>({name:x.b.name,value:x.v+'h',pct:(x.v/bhMax*100)+'%'}));
+    const marginList=fin.map(c=>({c,m:allStats[c.id].margin})).sort((a,b)=>a.m-b.m).slice(0,5).map(({c,m})=>({name:c.name,margin:inr(m),loss:m<0,color:m<0?'#070707':'#104943',go:()=>this.openClient(c.id)}));
+    const team=PEOPLE.filter(p=>p.team);
+    const load=team.map(p=>{const ts=vTasks.filter(t=>t.who===p.id); const h=ts.reduce((a,t)=>a+(+t.hours||0),0); return {name:p.name,ini:ini(p.name),hours:h+'h',over:h>60,detail:ts.filter(t=>t.status!=='done').length+' open · '+p.role,go:()=>this.setState({drawer:{type:'person',id:p.id}}),h};}).sort((a,b)=>b.h-a.h);
+    const aRow=a=>({...a,hasDiff:!!(a.from||a.to),from:a.from||'None',icon:I(a.kind==='access'?'key':a.kind==='expense'?'doc':'check')});
+    const vAudit=s.audit.filter(a=>isOwner||vis.some(c=>c.name===a.target));
+
+    // clients list
+    let rows=vis.filter(c=>(s.brandFilter==='all'||c.brand===s.brandFilter)&&(!ql||c.name.toLowerCase().includes(ql)));
+    rows=rows.map(c=>({c,st:allStats[c.id],f:finIds.has(c.id)}));
+    if(s.sort==='margin') rows.sort((a,b)=>(a.f?a.st.margin:1e12)-(b.f?b.st.margin:1e12)); else if(s.sort==='cost') rows.sort((a,b)=>(b.f?b.st.cost:-1)-(a.f?a.st.cost:-1)); else rows.sort((a,b)=>a.c.name.localeCompare(b.c.name));
+    const clientRows=rows.map(({c,st,f})=>({name:c.name,ini:ini(c.name),brand:B(c.brand).name,access:LVL[this.lvl(s.viewAs,c.id)],retainer:f?inr(c.retainer):'Restricted',cost:f?inr(st.cost):'Restricted',margin:f?inr(st.margin):'Restricted',
+      marginColor:!f?'#77787B':st.margin<0?'#070707':'#1B998F',finColor:f?'#070707':'#77787B',hours:st.hrs+'h',go:()=>this.openClient(c.id)}));
+    const brandChips=[this.chip(s.brandFilter==='all','All brands',()=>this.setState({brandFilter:'all'})),...BRANDS.map(b=>this.chip(s.brandFilter===b.id,b.name,()=>this.setState({brandFilter:b.id})))];
+
+    // client detail
+    let cd={stats:[],tabs:[],workers:[],people:[],openTasks:[],expenses:[],tasks:[],accessRows:[],history:[]};
+    const cc=C(s.clientId); let clientOk=false;
+    if(cc&&visIds.has(cc.id)){ clientOk=true; const st=allStats[cc.id], f=finIds.has(cc.id);
+      const cts=s.tasks.filter(t=>t.client===cc.id); const wk={}; cts.forEach(t=>wk[t.who]=(wk[t.who]||0)+(+t.hours||0));
+      const wMax=Math.max(1,...Object.values(wk));
+      const tabs=[['overview','Overview'],['expenses','Expenses'],['tasks','Tasks ('+cts.length+')'],['access','Access'],['history','History']];
+      const hist=s.audit.filter(a=>a.target===cc.name);
+      const finPeople=PEOPLE.filter(p=>p.team&&['owner','finance'].includes(this.lvl(p.id,cc.id))).map(p=>p.name);
+      cd={name:cc.name,ini:ini(cc.name),brand:B(cc.brand).name,since:cc.since,contact:cc.contact,access:LVL[this.lvl(s.viewAs,cc.id)],canFin:f,noFin:!f,
+        stats:[{label:'Retainer, September',value:f?inrS(cc.retainer):'Restricted',color:'#104943'},{label:'Cost, September',value:f?inrS(st.cost):'Restricted',color:'#104943'},
+          {label:'Margin',value:f?inrS(st.margin):'Restricted',color:f&&st.margin<0?'#070707':'#1B998F'},{label:'Hours logged',value:st.hrs+'h',color:'#104943'}],
+        tabs:tabs.map(([id,label])=>({label,go:()=>this.setState({tab:id}),line:s.tab===id?'#1B998F':'transparent',fg:s.tab===id?'#070707':'#77787B'})),
+        workers:Object.entries(wk).sort((a,b)=>b[1]-a[1]).map(([pid,h])=>({name:P(pid).name,hours:h+'h · '+(f?inr(h*RATE):'cost restricted'),pct:(h/wMax*100)+'%'})),
+        noWorkers:!Object.keys(wk).length,
+        people:[...PEOPLE.filter(p=>p.rels.some(r=>r.client===cc.id)).map(p=>({name:p.name,ini:ini(p.name),rel:p.rels.filter(r=>r.client===cc.id).map(r=>r.type).join(', ')+(p.rels.length>1?' · also '+p.rels.filter(r=>r.client!==cc.id).map(r=>r.type.toLowerCase()).join(', '):''),go:()=>this.setState({drawer:{type:'person',id:p.id}})})),
+          ...Object.keys(wk).map(pid=>({name:P(pid).name,ini:ini(P(pid).name),rel:'Team · '+P(pid).role,go:()=>this.setState({drawer:{type:'person',id:pid}})}))],
+        openTasks:cts.filter(t=>t.status!=='done').map(t=>({title:t.title,status:STATUS.find(x=>x.id===t.status).label,due:t.due,go:()=>this.openTask(t.id)})),
+        noOpen:!cts.some(t=>t.status!=='done'),
+        expenses:s.expenses.filter(e=>e.client===cc.id).map(e=>({desc:e.desc,date:e.d+' '+MON[e.m],cat:e.cat,by:P(e.by).name,amount:inr(e.amount),go:()=>this.openModal('editExpense',e)})),
+        tasks:cts.map(t=>{const d=t.status==='done'; return {title:t.title,who:P(t.who).name,hours:t.hours+'h',due:t.due,status:STATUS.find(x=>x.id===t.status).label,sBg:d?'#104943':'rgba(27,153,143,.12)',sFg:d?'#fff':'#104943',go:()=>this.openTask(t.id)};}),
+        finSummary:'Finance access: '+finPeople.join(', ')+'.'+(isOwner?' Changes apply immediately and are recorded.':' Only the founder can change these.'),
+        accessRows:team.map(p=>({name:p.name,ini:ini(p.name),role:p.role,level:this.lvl(p.id,cc.id),locked:!isOwner||p.id==='p1',onChange:e=>this.setGrant(p.id,cc.id,e.target.value)})),
+        history:hist.map(aRow),noHistory:!hist.length};
+    }
+    const cdTab={overview:s.tab==='overview',expenses:s.tab==='expenses',tasks:s.tab==='tasks',access:s.tab==='access',history:s.tab==='history'};
+
+    // people
+    const peopleCards=PEOPLE.map(p=>({name:p.name,ini:ini(p.name),sub:p.team?p.role:p.rels.length+' relationships',rels:p.rels.map(r=>r.type+(r.client?' · '+C(r.client).name:'')),
+      avBg:p.team?'rgba(27,153,143,.12)':'#104943',avFg:p.team?'#104943':'#fff',go:()=>this.setState({drawer:{type:'person',id:p.id}})}));
+
+    // expenses
+    const ex=vExp.filter(e=>(s.expBrand==='all'||C(e.client).brand===s.expBrand)&&(s.expMonth==='all'||String(e.m)===s.expMonth)).sort((a,b)=>b.m-a.m||b.d-a.d);
+    const expRows=ex.map(e=>({date:e.d+' '+MON[e.m],desc:e.desc,client:C(e.client).name,cat:e.cat,by:P(e.by).name,amount:inr(e.amount),go:()=>this.openModal('editExpense',e)}));
+    const expBrandChips=[this.chip(s.expBrand==='all','All brands',()=>this.setState({expBrand:'all'})),...BRANDS.map(b=>this.chip(s.expBrand===b.id,b.name,()=>this.setState({expBrand:b.id})))];
+
+    // tasks
+    const tt=vTasks.filter(t=>s.assignee==='all'||t.who===s.assignee);
+    const board=STATUS.map(st=>{const cards=tt.filter(t=>t.status===st.id); return {label:st.label,count:cards.length,
+      bg:s.dragId?'rgba(27,153,143,.07)':'rgba(119,120,123,.06)',border:s.dragId?'rgba(27,153,143,.5)':'transparent',
+      onDrop:e=>{e.preventDefault(); const id=s.dragId||e.dataTransfer.getData('text'); this.setState({dragId:null}); this.moveTask(id,st.id);},
+      cards:cards.map(t=>({title:t.title,client:C(t.client).name,ini:ini(P(t.who).name),hours:t.hours+'h logged',due:t.due,go:()=>this.openTask(t.id),
+        onDrag:e=>{e.dataTransfer.setData('text',t.id); e.dataTransfer.effectAllowed='move'; setTimeout(()=>this.setState({dragId:t.id}),0);}}))};});
+    const assigneeChips=[this.chip(s.assignee==='all','Everyone',()=>this.setState({assignee:'all'})),...team.map(p=>this.chip(s.assignee===p.id,p.id===s.viewAs?p.name+' (you)':p.name,()=>this.setState({assignee:p.id})))];
+
+    // access matrix
+    const matrix=team.map(p=>({name:p.name,role:p.role,cells:CLIENTS.map(c=>{const l=this.lvl(p.id,c.id), st=LVL_STYLE[l]; return {label:LVL[l],...st,locked:l==='owner',cursor:l==='owner'?'default':'pointer',go:()=>this.setGrant(p.id,c.id,CYCLE[l])};})}));
+    const legend=['view','edit','finance'].map(k=>({label:LVL[k]+(k==='view'?', read only':k==='edit'?', tasks and records':', includes expenses'),bg:LVL_STYLE[k].bg,border:LVL_STYLE[k].border}));
+
+    // audit
+    const auditRows=vAudit.filter(a=>s.auditFilter==='all'||a.kind===s.auditFilter).map(aRow);
+    const auditChips=[['all','All changes'],['expense','Expenses'],['task','Tasks'],['access','Access']].map(([id,l])=>this.chip(s.auditFilter===id,l,()=>this.setState({auditFilter:id})));
+
+    // drawer
+    let dr={}; const d=s.drawer;
+    if(d&&d.type==='task'){ const t=s.tasks.find(x=>x.id===d.id); const ro=!this.can(t.client,'edit');
+      dr={isTask:true,kicker:'Task · '+C(t.client).name,title:t.title,client:C(t.client).name,due:t.due,readOnly:ro,goClient:e=>{e.preventDefault(); this.setState({drawer:null}); this.openClient(t.client,'tasks');},
+        statuses:STATUS.map(x=>({label:x.label,go:()=>this.setState(z=>({draft:{...z.draft,status:x.id}})),bg:s.draft.status===x.id?'#fff':'transparent',fg:s.draft.status===x.id?'#104943':'#77787B'}))};
+    }
+    if(d&&d.type==='person'){ const p=P(d.id); const g=p.team?CLIENTS.map(c=>({c,l:this.lvl(p.id,c.id)})).filter(x=>x.l!=='none').map(x=>x.c.name+' · '+LVL[x.l]):[];
+      const pt=vTasks.filter(t=>t.who===p.id&&t.status!=='done');
+      dr={isPerson:true,kicker:p.team?'Team · '+p.role:'Person · one record',title:p.name,
+        rels:p.rels.map(r=>({type:r.type,detail:r.detail,hasClient:!!(r.client&&visIds.has(r.client)),client:r.client?C(r.client).name:'',go:e=>{e.preventDefault(); this.setState({drawer:null}); this.openClient(r.client);}})),
+        grants:g,hasGrants:g.length>0,tasks:pt.map(t=>({title:t.title,client:C(t.client).name,go:()=>this.openTask(t.id)})),hasTasks:pt.length>0};
+    }
+
+    // modal
+    let md={fields:[]}; const f=s.form, er=s.errors;
+    const fld=(name,label,o={})=>({name,label,value:f[name]??'',isSelect:!!o.options,isInput:!o.options,type:o.type||'text',ph:o.ph||'',options:o.options||[],error:er[name]||'',hasError:!!er[name],border:er[name]?'#070707':'rgba(119,120,123,.35)'});
+    const cats=['Software','Production','Contractors','Media','Infrastructure','Travel','Events'].map(x=>({id:x,name:x}));
+    if(s.modal==='newExpense') md={title:'New expense',submit:'Add expense',fields:[fld('desc','Description',{ph:'e.g. Cloud hosting, October'}),fld('client','Client',{options:[{id:'',name:'Select a client'},...fin.map(c=>({id:c.id,name:c.name}))]}),
+      fld('cat','Category',{options:cats}),fld('amount','Amount (₹)',{type:'text',ph:'e.g. 42000'}),fld('m','Month',{options:[{id:'9',name:'September'},{id:'8',name:'August'},{id:'7',name:'July'}]})],hasNote:true,note:'Only clients where you hold Finance access are listed.'};
+    if(s.modal==='editExpense') md={title:'Edit expense',submit:'Save changes',fields:[fld('desc','Description'),fld('cat','Category',{options:cats}),fld('amount','Amount (₹)')],hasNote:true,note:'The previous value is kept in the audit trail with your name and the time.'};
+    if(s.modal==='newTask') md={title:'New task',submit:'Create task',fields:[fld('title','Title',{ph:'e.g. October content calendar'}),fld('client','Client',{options:[{id:'',name:'Select a client'},...vis.filter(c=>this.can(c.id,'edit')).map(c=>({id:c.id,name:c.name}))]}),
+      fld('who','Assignee',{options:team.map(p=>({id:p.id,name:p.name}))}),fld('due','Due',{ph:'e.g. 15 Oct'})]};
+
+    const titles={dashboard:['Overview','Dashboard'],clients:['Directory','Clients'],people:['Directory','People'],expenses:['Finance','Expenses'],tasks:['Work','Tasks'],access:['Security','Access'],audit:['Security','Audit trail']};
+    const isClient=s.view==='client'&&clientOk;
+    const view=s.view==='client'&&!clientOk?'clients':s.view;
+    const canAddExp=fin.length>0;
+    const primary=view==='expenses'&&canAddExp?{show:true,label:'New expense',go:()=>this.openModal('newExpense')}
+      :view==='tasks'?{show:true,label:'New task',go:()=>this.openModal('newTask')}
+      :isClient&&s.tab==='expenses'&&cd.canFin?{show:true,label:'New expense',go:()=>this.openModal('newExpense')}
+      :isClient&&this.can(cc.id,'edit')?{show:true,label:'New task',go:()=>this.openModal('newTask')}:{show:false};
+
+    return {
+      L,sb,nav,isNarrow:narrow,isWide:!narrow,scrim:narrow&&s.menuOpen,openMenu:()=>this.setState({menuOpen:true}),closeMenu:()=>this.setState({menuOpen:false}),
+      viewAs:s.viewAs,teamOptions:team.map(p=>({id:p.id,label:p.name+' · '+p.role})),teamList:team,onViewAs:e=>this.setState({viewAs:e.target.value,drawer:null}),
+      restricted:!isOwner,restrictedText:'Viewing as '+viewer.name+'. '+vis.length+' of '+CLIENTS.length+' clients visible, finance on '+fin.length+'.',resetViewAs:()=>this.setState({viewAs:'p1'}),
+      title:isClient?cc.name:titles[view][1],sub:isClient?B(cc.brand).name:titles[view][0],hasCrumb:isClient,crumb:'Clients',crumbGo:e=>{e.preventDefault(); this.go('clients');},
+      q:s.q,onQ:e=>this.setState({q:e.target.value,searchOpen:true}),openSearch:()=>this.setState({searchOpen:true}),showResults:s.searchOpen&&!!ql&&view!=='clients',results,noResults:!results.length,
+      primary,viewKey:view+(isClient?cc.id:''),
+      is:{dashboard:view==='dashboard',clients:view==='clients',client:isClient,people:view==='people',expenses:view==='expenses',tasks:view==='tasks',access:view==='access',audit:view==='audit'},
+      kpis,brandSpend,brandHours,marginList,marginEmpty:!marginList.length,load,recentAudit:vAudit.slice(0,5),goAudit:e=>{e.preventDefault(); this.go('audit');},goClientsByMargin:e=>{e.preventDefault(); this.go('clients',{sort:'margin'});},
+      brandChips,sort:s.sort,onSort:e=>this.setState({sort:e.target.value}),clientRows,clientsEmpty:!clientRows.length,
+      cd,cdTab,peopleCards,
+      expBrandChips,expMonth:s.expMonth,onExpMonth:e=>this.setState({expMonth:e.target.value}),expRows,expEmpty:!expRows.length,expCount:expRows.length+' expenses',expTotal:inr(ex.reduce((a,e)=>a+e.amount,0)),
+      board,assigneeChips,allowDrop:e=>e.preventDefault(),endDrag:()=>this.setState({dragId:null}),
+      isOwner,notOwner:!isOwner,matrix,matrixCols:CLIENTS.map(c=>c.name),legend,
+      auditRows,auditChips,
+      drawerOpen:!!d,dr,draft:s.draft,onDraft:e=>{const {name,value}=e.target; this.setState(z=>({draft:{...z.draft,[name]:value}}));},closeDrawer:()=>this.setState({drawer:null}),
+      saveTask:()=>this.saveTask(),saveLabel:s.saving?'Saving':'Save',saveDisabled:s.saving||!!dr.readOnly,saveBg:s.saving||dr.readOnly?'#77787B':'#1B998F',
+      saveNote:s.saving?'Writing to the database':'Saved only after the database confirms.',
+      modalOpen:!!s.modal,md:{...md,hasNote:!!md.hasNote},onField:e=>{const {name,value}=e.target; this.setState(z=>({form:{...z.form,[name]:value},errors:{...z.errors,[name]:''}}));},
+      closeModal:()=>this.setState({modal:null}),stop:e=>e.stopPropagation(),submitModal:e=>{e.preventDefault(); this.submit();},
+      toastOn:!!s.toast,toast:s.toast
+    };
+  }
+  setGrant(pid,cid,l){ if(this.state.viewAs!=='p1'||pid==='p1') return; const from=this.lvl(pid,cid); if(from===l) return;
+    this.setState(s=>({grants:{...s.grants,[pid+':'+cid]:l}}));
+    this.log({kind:'access',text:'changed access for '+P(pid).name,target:C(cid).name,from:LVL[from],to:LVL[l]}); this.toast(P(pid).name+' now has '+LVL[l]+' on '+C(cid).name+'.'); }
+  saveTask(){ const s=this.state,d=s.drawer,t=s.tasks.find(x=>x.id===d.id),dr=s.draft; this.setState({saving:true});
+    setTimeout(()=>{ const h=Math.max(0,Number(dr.hours)||0); const ch=[];
+      if(dr.status!==t.status) ch.push({kind:'task',text:'moved “'+t.title+'”',target:C(t.client).name,from:STATUS.find(x=>x.id===t.status).label,to:STATUS.find(x=>x.id===dr.status).label});
+      if(dr.who!==t.who) ch.push({kind:'task',text:'reassigned “'+t.title+'”',target:C(t.client).name,from:P(t.who).name,to:P(dr.who).name});
+      if(h!==+t.hours) ch.push({kind:'task',text:'logged hours on “'+t.title+'”',target:C(t.client).name,from:t.hours+'h',to:h+'h'});
+      this.setState(z=>({tasks:z.tasks.map(x=>x.id===t.id?{...x,status:dr.status,who:dr.who,hours:h}:x),saving:false,drawer:null}));
+      ch.forEach(c=>this.log(c)); this.toast(ch.length?'Saved and confirmed by the database.':'No changes to save.'); },600); }
+}
+</script>
+</body>
+</html>

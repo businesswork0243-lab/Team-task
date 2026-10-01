@@ -1,0 +1,17 @@
+{
+  "name": "operations-platform",
+  "version": "1.0.0",
+  "description": "Operations Platform - Agency Operations, Team Management & Financial Control",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.2.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2"
+  }
+}
