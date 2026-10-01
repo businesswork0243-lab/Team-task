@@ -2,7 +2,7 @@
 import {
   BRANDS, CLIENTS, TEAM_MEMBERS, TASKS_DATA, HOLIDAYS_2026_OCT,
   STATUS_LIST, getClient, getMember, getBrand,
-  loadSavedState, persistState, resetSavedState
+  getSessionUser, setSessionUser, loadSavedState, persistState
 } from './data.js';
 import { icon, workspaceLogo } from './icons.js';
 import {
@@ -13,10 +13,13 @@ import {
 class WorkspaceApp {
   constructor() {
     const saved = loadSavedState();
+    const sessionUserId = getSessionUser();
 
     this.state = {
+      isLoggedIn: Boolean(sessionUserId),
       currentView: 'dashboard', // 'dashboard' | 'tasks' | 'clients'
-      viewAs: saved?.viewAs || 'rakesh', // Default to Rakesh Kumar as shown in screenshot
+      viewAs: sessionUserId || 'rakesh',
+      loginTab: 'profiles', // 'profiles' | 'email'
       tasks: saved?.tasks || JSON.parse(JSON.stringify(TASKS_DATA)),
       clients: saved?.clients || JSON.parse(JSON.stringify(CLIENTS)),
       teamMembers: TEAM_MEMBERS,
@@ -54,7 +57,7 @@ class WorkspaceApp {
           cloudConnected: true
         });
 
-        // Subscribe to real-time updates across multiple users
+        // Real-time listener for tasks across multiple users
         this._unsubscribe = subscribeToTaskChanges(async () => {
           const freshTasks = await getDbTasks();
           this.setState({ tasks: freshTasks });
@@ -90,6 +93,26 @@ class WorkspaceApp {
     this._toastTimer = setTimeout(() => {
       this.setState({ toast: null });
     }, 3200);
+  }
+
+  login(userId) {
+    setSessionUser(userId);
+    const member = this.state.teamMembers.find(m => m.id === userId) || TEAM_MEMBERS[1];
+    this.setState({
+      isLoggedIn: true,
+      viewAs: userId,
+      currentView: 'dashboard'
+    });
+    this.toast(`Welcome, ${member.name}! Signed in as ${member.role}.`);
+  }
+
+  logout() {
+    setSessionUser(null);
+    this.setState({
+      isLoggedIn: false,
+      currentView: 'dashboard'
+    });
+    this.toast('Logged out successfully.');
   }
 
   getCurrentUser() {
@@ -144,6 +167,13 @@ class WorkspaceApp {
     const appEl = document.getElementById('app');
     if (!appEl) return;
 
+    // If user is logged out, render the Login Screen
+    if (!this.state.isLoggedIn) {
+      appEl.innerHTML = this.renderLoginPage();
+      this.attachLoginEvents();
+      return;
+    }
+
     const user = this.getCurrentUser();
     const isFounder = user.isFounder;
     const visibleClients = this.getVisibleClients();
@@ -192,7 +222,7 @@ class WorkspaceApp {
             <span class="sidebar-footer-caption">
               Access is enforced per person, per client.
             </span>
-            <button id="logout-btn" class="logout-btn">
+            <button id="logout-btn" class="logout-btn" title="Sign out of current account">
               ${icon('logout', 14)}
               Log out
             </button>
@@ -271,8 +301,102 @@ class WorkspaceApp {
     this.attachEvents();
   }
 
+  renderLoginPage() {
+    return `
+      <div class="login-page-container">
+        <div class="login-card">
+          <div class="login-card-header">
+            ${workspaceLogo(48)}
+            <h1 class="login-title">Operations Workspace</h1>
+            <p class="login-subtitle">Choose your user profile or sign in to access your assigned client dashboard.</p>
+          </div>
+
+          <div class="login-tabs">
+            <button class="login-tab-btn ${this.state.loginTab === 'profiles' ? 'active' : ''}" data-login-tab="profiles">
+              Team Profiles (1-Click)
+            </button>
+            <button class="login-tab-btn ${this.state.loginTab === 'email' ? 'active' : ''}" data-login-tab="email">
+              Email & Password
+            </button>
+          </div>
+
+          ${this.state.loginTab === 'profiles' ? `
+            <div class="user-profiles-grid">
+              ${this.state.teamMembers.map(m => {
+                const isF = m.isFounder;
+                const initials = m.name.split(' ').map(w => w[0]).slice(0, 2).join('');
+                return `
+                  <button class="user-profile-select-btn" data-login-user="${m.id}">
+                    <div class="user-avatar-circle ${isF ? 'founder' : ''}">
+                      ${initials}
+                    </div>
+                    <div class="user-info-meta">
+                      <span class="user-info-name">${m.name}</span>
+                      <span class="user-info-role">${m.role}</span>
+                      <span class="user-access-tag">${isF ? '5 clients (Full Access)' : (m.allowedClients.length ? `${m.allowedClients.length} clients visible` : 'View only (0 clients)')}</span>
+                    </div>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          ` : `
+            <form id="email-login-form" class="login-form-box">
+              <label class="login-form-group">
+                Email Address
+                <input id="login-email" type="email" class="login-input" placeholder="e.g. rakesh@workspace.com" required value="rakesh@workspace.com" />
+              </label>
+
+              <label class="login-form-group">
+                Password
+                <input id="login-password" type="password" class="login-input" placeholder="••••••••" required value="workspace123" />
+              </label>
+
+              <button type="submit" class="login-submit-btn">
+                Sign In to Workspace
+              </button>
+            </form>
+          `}
+        </div>
+
+        ${this.state.toast ? `<div class="toast-msg">${this.escapeHtml(this.state.toast)}</div>` : ''}
+      </div>
+    `;
+  }
+
+  attachLoginEvents() {
+    // Tab switching
+    document.querySelectorAll('[data-login-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.setState({ loginTab: btn.getAttribute('data-login-tab') });
+      });
+    });
+
+    // Profile card click to login
+    document.querySelectorAll('[data-login-user]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const userId = btn.getAttribute('data-login-user');
+        this.login(userId);
+      });
+    });
+
+    // Email login form
+    const emailForm = document.getElementById('email-login-form');
+    if (emailForm) {
+      emailForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email')?.value.trim().toLowerCase();
+        const matched = this.state.teamMembers.find(m => m.email.toLowerCase() === email);
+        if (matched) {
+          this.login(matched.id);
+        } else {
+          // Default to Rakesh Kumar if arbitrary email
+          this.login('rakesh');
+        }
+      });
+    }
+  }
+
   renderDashboard(visibleTasks) {
-    // Calculate status counts
     const statusCounts = {
       total: visibleTasks.length,
       not_started: visibleTasks.filter(t => t.status === 'not_started').length,
@@ -366,7 +490,6 @@ class WorkspaceApp {
       const holiday = HOLIDAYS_2026_OCT[dateStr];
       const isCurrentHighlight = day === 1; // Highlight Oct 1 as in screenshot
 
-      // Filter tasks for this day
       let dayTasks = visibleTasks.filter(t => t.date === dateStr);
       if (this.state.activeStatusFilter !== 'total') {
         dayTasks = dayTasks.filter(t => t.status === this.state.activeStatusFilter);
@@ -551,7 +674,7 @@ class WorkspaceApp {
     const viewingAsSelect = document.getElementById('viewing-as-select');
     if (viewingAsSelect) {
       viewingAsSelect.addEventListener('change', (e) => {
-        this.setState({ viewAs: e.target.value });
+        this.login(e.target.value);
       });
     }
 
@@ -559,18 +682,15 @@ class WorkspaceApp {
     const backBtn = document.getElementById('back-to-founder-btn');
     if (backBtn) {
       backBtn.addEventListener('click', () => {
-        this.setState({ viewAs: 'founder' });
+        this.login('founder');
       });
     }
 
-    // Logout
+    // Logout button - Actual Logout to Login screen
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', () => {
-        if (confirm('Log out from Operations Workspace?')) {
-          this.setState({ viewAs: 'rakesh', currentView: 'dashboard' });
-          this.toast('Logged out to standard team view.');
-        }
+        this.logout();
       });
     }
 
@@ -687,7 +807,6 @@ class WorkspaceApp {
           description: 'Custom created task via workspace dashboard.'
         };
 
-        // Save locally and in Supabase Cloud DB
         this.setState(s => ({
           tasks: [newTask, ...s.tasks],
           modalOpen: false

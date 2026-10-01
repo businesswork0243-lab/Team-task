@@ -17,12 +17,60 @@ export const CLIENTS = [
 ];
 
 export const TEAM_MEMBERS = [
-  { id: 'founder', name: 'Founder (You)', role: 'Owner & Founder', isFounder: true, allowedClients: ['arc3', 'mer', 'sah', 'oak', 'lum'] },
-  { id: 'rakesh', name: 'Rakesh Kumar', role: 'Team member', isFounder: false, allowedClients: [] }, // 0 of 5 clients visible
-  { id: 'priya', name: 'Priya Nair', role: 'Operations lead', isFounder: false, allowedClients: ['arc3', 'mer', 'sah', 'oak', 'lum'] },
-  { id: 'rohan', name: 'Rohan Das', role: 'Designer', isFounder: false, allowedClients: ['arc3', 'mer', 'oak'] },
-  { id: 'sana', name: 'Sana Kapoor', role: 'Finance lead', isFounder: false, allowedClients: ['arc3', 'mer', 'sah', 'oak', 'lum'] },
-  { id: 'dev', name: 'Dev Malhotra', role: 'Developer', isFounder: false, allowedClients: ['sah', 'oak', 'lum'] }
+  {
+    id: 'founder',
+    name: 'Founder (You)',
+    email: 'founder@workspace.com',
+    role: 'Owner & Founder',
+    badge: 'Owner',
+    isFounder: true,
+    allowedClients: ['arc3', 'mer', 'sah', 'oak', 'lum']
+  },
+  {
+    id: 'rakesh',
+    name: 'Rakesh Kumar',
+    email: 'rakesh@workspace.com',
+    role: 'Team member',
+    badge: 'Team',
+    isFounder: false,
+    allowedClients: [] // 0 of 5 clients visible
+  },
+  {
+    id: 'priya',
+    name: 'Priya Nair',
+    email: 'priya@workspace.com',
+    role: 'Operations lead',
+    badge: 'Operations',
+    isFounder: false,
+    allowedClients: ['arc3', 'mer', 'sah', 'oak', 'lum']
+  },
+  {
+    id: 'rohan',
+    name: 'Rohan Das',
+    email: 'rohan@workspace.com',
+    role: 'Designer',
+    badge: 'Designer',
+    isFounder: false,
+    allowedClients: ['arc3', 'mer', 'oak']
+  },
+  {
+    id: 'sana',
+    name: 'Sana Kapoor',
+    email: 'sana@workspace.com',
+    role: 'Finance lead',
+    badge: 'Finance',
+    isFounder: false,
+    allowedClients: ['arc3', 'mer', 'sah', 'oak', 'lum']
+  },
+  {
+    id: 'dev',
+    name: 'Dev Malhotra',
+    email: 'dev@workspace.com',
+    role: 'Developer',
+    badge: 'Developer',
+    isFounder: false,
+    allowedClients: ['sah', 'oak', 'lum']
+  }
 ];
 
 // Initial 9 tasks
@@ -33,7 +81,7 @@ export const TASKS_DATA = [
     client: 'arc3',
     assignee: 'rohan',
     status: 'not_started',
-    date: '2026-10-01', // Day 1
+    date: '2026-10-01',
     hours: 12,
     priority: 'High',
     description: 'Create moodboard and initial visual direction for the Q4 promotional push.'
@@ -121,7 +169,7 @@ export const TASKS_DATA = [
     client: 'mer',
     assignee: 'priya',
     status: 'late',
-    date: '2026-09-29', // Previous month / late
+    date: '2026-09-29',
     hours: 10,
     priority: 'Medium',
     description: 'Final color inspection with printer before 5,000 unit print run.'
@@ -155,8 +203,29 @@ export function getBrand(id) {
   return BRANDS.find(b => b.id === id);
 }
 
-// LocalStorage helpers
-const STORAGE_KEY = 'ops_workspace_purple_v1';
+// Session & LocalStorage helpers
+const AUTH_KEY = 'ops_auth_current_user_v1';
+const STORAGE_KEY = 'ops_workspace_state_v1';
+
+export function getSessionUser() {
+  try {
+    const raw = localStorage.getItem(AUTH_KEY);
+    if (!raw) return 'rakesh'; // default active user session
+    return raw;
+  } catch (e) {
+    return 'rakesh';
+  }
+}
+
+export function setSessionUser(userId) {
+  try {
+    if (!userId) {
+      localStorage.removeItem(AUTH_KEY);
+    } else {
+      localStorage.setItem(AUTH_KEY, userId);
+    }
+  } catch (e) {}
+}
 
 export function loadSavedState() {
   try {
@@ -187,5 +256,6 @@ export function persistState(state) {
 export function resetSavedState() {
   try {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(AUTH_KEY);
   } catch (e) {}
 }

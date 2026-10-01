@@ -42,7 +42,212 @@ button, input, select, textarea {
   color: inherit;
 }
 
-/* Main Container Layout */
+/* ========================================================
+   LOGIN SCREEN
+   ======================================================== */
+.login-page-container {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 0%, #1E1B4B 0%, #0F172A 70%, #020617 100%);
+  padding: 24px 16px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 580px;
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 36px 32px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: cardFadeIn 250ms ease;
+}
+
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.login-card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.login-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.02em;
+}
+
+.login-subtitle {
+  font-size: 13.5px;
+  color: #64748B;
+  max-width: 42ch;
+}
+
+.login-tabs {
+  display: flex;
+  background: #F1F5F9;
+  border-radius: 8px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.login-tab-btn {
+  flex: 1;
+  height: 36px;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748B;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.login-tab-btn.active {
+  background: #FFFFFF;
+  color: #0F172A;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.user-profiles-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.user-profile-select-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition);
+}
+
+.user-profile-select-btn:hover {
+  border-color: #6366F1;
+  background: #EEF2FF;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.12);
+}
+
+.user-avatar-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #EEF2FF;
+  color: #4F46E5;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.user-avatar-circle.founder {
+  background: #4F46E5;
+  color: #FFFFFF;
+}
+
+.user-info-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.user-info-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-info-role {
+  font-size: 11px;
+  color: #64748B;
+  margin-top: 1px;
+}
+
+.user-access-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #F1F5F9;
+  color: #475569;
+  width: fit-content;
+  margin-top: 3px;
+}
+
+.login-form-box {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.login-input {
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+
+.login-input:focus {
+  border-color: #4F46E5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.login-submit-btn {
+  height: 44px;
+  border-radius: 8px;
+  background: #4F46E5;
+  color: #FFFFFF;
+  border: 0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: all var(--transition);
+}
+
+.login-submit-btn:hover {
+  background: #4338CA;
+}
+
+/* ========================================================
+   MAIN WORKSPACE LAYOUT
+   ======================================================== */
 .app-layout {
   display: flex;
   height: 100vh;
@@ -192,7 +397,8 @@ button, input, select, textarea {
 }
 
 .logout-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: #EF4444;
+  border-color: #EF4444;
   color: #ffffff;
 }
 
@@ -584,7 +790,7 @@ button, input, select, textarea {
   font-weight: 500;
 }
 
-/* Tasks View (Kanban / List) */
+/* Tasks View */
 .tasks-container {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -764,5 +970,8 @@ button, input, select, textarea {
   }
   .status-cards-row {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .user-profiles-grid {
+    grid-template-columns: 1fr;
   }
 }
