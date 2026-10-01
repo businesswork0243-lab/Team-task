@@ -8,3 +8,4 @@ dist
 *.log
 supabase/setup.sql
 Operations Platform.html
+supabase/transfer-owner.sql

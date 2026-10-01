@@ -2575,7 +2575,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid r
       </div>
       <sc-if value="{{ dr.canRemove }}">
         <div style="padding:16px 24px;border-top:1px solid rgba(100,116,139,.2)">
-          <button sc-camel-on-click="{{ dr.remove }}" style="height:38px;padding:0 16px;border-radius:8px;border:1px solid #FCA5A5;background:#fff;color:#DC2626;font-size:13px;font-weight:var(--fw-strong,600);cursor:pointer" style-hover="background:#FEF2F2">Remove client</button>
+          <button sc-camel-on-click="{{ dr.remove }}" style="height:38px;padding:0 16px;border-radius:8px;border:1px solid #FCA5A5;background:#fff;color:#DC2626;font-size:13px;font-weight:var(--fw-strong,600);cursor:pointer" style-hover="background:#FEF2F2">{{ dr.removeLabel }}</button>
         </div>
       </sc-if>
       <sc-if value="{{ dr.isDay }}">
@@ -3013,6 +3013,7 @@ class Component extends DCLogic {
     if(type==='editMember'){ const x=data.hr||{}; form={id:data.id,name:data.name,role:data.role||'',dept:x.dept||'',brand:x.brand||BRANDS[0].id,type:x.type||'Full-time',start:x.start||'',salary:x.salary!=null?String(x.salary):'',email:x.email||'',phone:x.phone||'',manager:x.manager||''}; }
     if(type==='editClient') form={...data,company:data.company||'',services:data.services||'',contact:data.contact||'',retainer:String(data.retainer),sinceDate:data.sinceDate||'',payDay:data.payDay||''};
     if(type==='removeClient') form={...data};
+    if(type==='removeMember') form={...data};
     if(type==='member') form={name:'',role:'',dept:DEPTS0[1],brand:BRANDS[0].id,type:'Full-time',start:TODAY,salary:'',email:''};
     if(type==='person') form={name:'',rel:'Client contact',client:data.client||'',detail:'',pid:data.pid||''};
     if(type==='leave') form={who:(OWN(s.viewAs)&&data.who)||s.viewAs,type:'Annual',from:'',to:'',note:''};
@@ -3063,7 +3064,7 @@ class Component extends DCLogic {
 
   submit(){ const s=this.state,f=s.form,err={}; const num=v=>Number(String(v).replace(/[,₹\s]/g,''));
     const done=(msg)=>{ this.setState({modal:null}); this.toast(msg); };
-    const MF={entry:'expenses',editEntry:'expenses',confirmDelete:'expenses',task:'tasks',client:'clients',editClient:'clients',removeClient:'clients',member:'team',leave:'team'};
+    const MF={entry:'expenses',editEntry:'expenses',confirmDelete:'expenses',task:'tasks',client:'clients',editClient:'clients',removeClient:'clients',removeMember:'team',member:'team',leave:'team'};
     if(MF[s.modal]&&this.fa(s.viewAs,MF[s.modal])!=='edit'){ this.setState({modal:null}); return this.toast('You have view-only access here. Nothing was saved.'); }
     if(s.modal==='draw'){ if(!this.payE()){ this.setState({modal:null}); return this.toast('You need Edit access on Payroll to record draws.'); }
       const a=num(f.amount); if(!a||a<=0) err.amount='Enter an amount above zero, in rupees.'; if(!f.date) err.date='Pick a date.';
@@ -3146,6 +3147,10 @@ class Component extends DCLogic {
       this.log({kind:'client',text:'edited the profile of '+f.name.trim(),target:f.name.trim(),from:old.retainer!==nr?inr(old.retainer):'',to:old.retainer!==nr?inr(nr):'Profile updated'}); done('Client profile saved.');
     } else if(s.modal==='removeClient'){
       this.setState(x=>({clients:x.clients.filter(c=>c.id!==f.id),drawer:null})); this.log({kind:'client',text:'removed client “'+f.name+'”',target:f.name,from:'Active',to:'Removed'}); done(f.name+' removed.');
+    } else if(s.modal==='removeMember'){
+      if(OWN(f.id)||f.id===s.me){ this.setState({modal:null}); return this.toast('Owners and your own profile cannot be removed.'); }
+      this.setState(x=>({people:x.people.map(p=>p.id===f.id?{...p,team:false,removed:TODAY,hr:p.hr?{...p.hr,status:'Left'}:p.hr}:p),drawer:null}));
+      this.log({kind:'team',text:'removed '+f.name+' from the team',target:'Team',from:'Active',to:'Removed'}); done(f.name+' removed from the team. Their login no longer opens this workspace.');
     } else if(s.modal==='confirmDelete'){
       const e=s.ledger.find(x=>x.id===f.id); this.setState(x=>({ledger:x.ledger.filter(z=>z.id!==f.id)}));
       this.log({kind:'expense',text:'deleted “'+e.desc+'”',target:C(e.client).name,from:inr(e.amount),to:'Deleted'}); done('Entry deleted. The record stays in the audit trail.');
@@ -3537,7 +3542,7 @@ class Component extends DCLogic {
         earn:Object.entries(bySvc).map(([k,o])=>({svc:k,total:inr(o.t),n:o.n+'x',last:dLabel(o.last)})),
         hist:inc.map(e=>({date:dLabel(e.date),amount:'+'+inr(e.amount),cur:e.cur||'INR',status:e.status==='paid'?'Received':'Pending',sBg:e.status==='paid'?'#DCFCE7':'#FEF3C7',sFg:e.status==='paid'?'#15803D':'#B45309',svc:(e.cur&&e.orig?fmtC(e.orig,e.cur)+' · ':'')+e.desc,go:()=>this.openModal('editEntry',e)})),
         noHist:!inc.length,cantEdit:!(this.fa(s.viewAs,'clients')==='edit'&&this.can(c.id,'edit')),canRemove:isOwner,
-        edit:()=>this.openModal('editClient',c),openFull:()=>this.openClient(c.id),remove:()=>this.openModal('removeClient',{id:c.id,name:c.name}),addIncome:e=>{e.preventDefault(); this.openModal('entry',{type:'in',client:c.id});}}; } }
+        edit:()=>this.openModal('editClient',c),openFull:()=>this.openClient(c.id),remove:()=>this.openModal('removeClient',{id:c.id,name:c.name}),removeLabel:'Remove client',addIncome:e=>{e.preventDefault(); this.openModal('entry',{type:'in',client:c.id});}}; } }
     if(d&&d.type==='day'){ const dd=pd(d.day); const sm={}; dayTs.forEach(t=>{const k=this.stOf(t); sm[k]=(sm[k]||0)+1;});
       dr={isDay:true,kicker:dayTs.length+(dayTs.length===1?' task':' tasks')+' due',title:DOW[dd.getDay()]+', '+dd.getDate()+' '+MNF[dd.getMonth()]+' '+dd.getFullYear(),
         summary:Object.keys(sm).map(k=>({label:sm[k]+' '+DOT[k].label.toLowerCase(),bg:DOT[k].bg,edge:DOT[k].edge})),items:dayItems,empty:!dayItems.length,
@@ -3556,7 +3561,7 @@ class Component extends DCLogic {
       const pt=vTasks.filter(t=>t.who===p.id&&t.status!=='done'); const h=p.hr;
       dr={isPerson:true,isTeam:!!p.team,kicker:p.team?'Team · '+(h?h.dept:p.role):'Person · one record',title:p.name,
         facts:h?[{k:'Role',v:p.role},{k:'Brand',v:B(h.brand).name},{k:'Type',v:h.type},{k:'Joined',v:dLabel(h.start)+' '+h.start.slice(0,4)},{k:'Email',v:h.email||'Not set'},{k:'Phone',v:h.phone||'Not set'},{k:'Reports to',v:h.manager?P(h.manager).name:'None'},{k:'Monthly salary',v:h.salary?(this.payV()?inr(h.salary):'Restricted'):'Not on payroll'},...(this.payV()?[{k:'Paid via',v:payTo(h.pay)}]:[])]:[],
-        status:h?h.status:'',hrLocked:!hrAdmin||OWN(p.id),canEditMember:!!p.team&&(hrAdmin||isOwner),editMember:()=>this.openModal('editMember',p),showTD:!!p.team&&!OWN(p.id),
+        status:h?h.status:'',hrLocked:!hrAdmin||OWN(p.id),canEditMember:!!p.team&&(hrAdmin||isOwner),editMember:()=>this.openModal('editMember',p),canRemove:!!p.team&&(hrAdmin||isOwner)&&!OWN(p.id)&&p.id!==s.me&&this.fa(s.viewAs,'team')==='edit',remove:()=>this.openModal('removeMember',{id:p.id,name:p.name}),removeLabel:'Remove from team',showTD:!!p.team&&!OWN(p.id),
         tdNote:(p.taskDepts&&p.taskDepts.length)?'Only tasks in these departments, plus tasks assigned to them.':'All departments. Pick one or more to limit what they see.',
         tdChips:[{id:'__all',name:'All'},...TDEPTS].map(d=>{ const sel=d.id==='__all'?!(p.taskDepts&&p.taskDepts.length):(p.taskDepts||[]).includes(d.id); return {label:d.name,bg:sel?'#5B5BD6':'#fff',fg:sel?'#fff':'#0F172A',border:sel?'#5B5BD6':'#E2E8F0',
           go:()=>{ if(!hrAdmin||OWN(p.id)) return; const cur=p.taskDepts||[]; const nx=d.id==='__all'?[]:cur.includes(d.id)?cur.filter(x=>x!==d.id):[...cur,d.id];
@@ -3620,8 +3625,9 @@ class Component extends DCLogic {
     if(s.modal==='confirmDelete') md={title:'Delete entry',submit:'Delete',hasText:true,text:'Delete “'+f.desc+'” for '+inr(f.amount||0)+'? It will leave the ledger, and the deletion is recorded in the audit trail.',fields:[]};
     if(s.modal==='editClient') md={title:'Edit client profile',submit:'Save changes',fields:[fld('name','Client name'),fld('company','Company'),fld('brand','Brand',{options:brandOpts,add:'brand',addKind:'brand'}),
       fld('retainer','Monthly retainer (₹)'),fld('sinceDate','Onboard date',{type:'date'}),fld('payDay','Paid date',{options:PAYDAYS}),fld('services','Services provided',{full:true}),fld('contact','Main contact',{full:true})],hasNote:true,note:'Changes are recorded in the audit trail.'};
+    if(s.modal==='removeMember') md={title:'Remove team member',submit:'Remove from team',hasText:true,text:'Remove '+f.name+' from the team? They lose access to this workspace right away. Their past tasks, salary records and history stay. The removal is recorded in the audit trail.',fields:[]};
     if(s.modal==='removeClient') md={title:'Remove client',submit:'Remove client',hasText:true,text:'Remove '+f.name+'? The client leaves every list and report. The removal is recorded in the audit trail.',fields:[]};
-    md.submitBg=(s.modal==='confirmDelete'||s.modal==='removeClient'||s.modal==='deleteDraw')?'#DC2626':'#5B5BD6'; md.hasNote=!!md.hasNote; md.hasToggle=!!md.hasToggle; md.hasText=!!md.hasText;
+    md.submitBg=(s.modal==='confirmDelete'||s.modal==='removeClient'||s.modal==='removeMember'||s.modal==='deleteDraw')?'#DC2626':'#5B5BD6'; md.hasNote=!!md.hasNote; md.hasToggle=!!md.hasToggle; md.hasText=!!md.hasText;
     this._fields=md.fields;
 
     // quick add
