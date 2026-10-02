@@ -2108,6 +2108,14 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid r
           <button sc-camel-on-click="{{ tk.toggleRec }}" style="height:38px;padding:0 14px;border:1px solid {{ tk.recBorder }};border-radius:8px;background:{{ tk.recBg }};color:#0F172A;font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer;white-space:nowrap">↻ Recurring {{ tk.recCount }}</button>
           <button sc-camel-on-click="{{ tk.add }}" style="height:38px;padding:0 16px;border:0;border-radius:8px;background:#5B5BD6;color:#fff;font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer" style-hover="background:#4C4CC4">+ Add task</button>
         </div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px">
+          <button sc-camel-on-click="{{ tk.prevMonth }}" aria-label="Previous month" style="width:36px;height:36px;border:1px solid rgba(100,116,139,.3);border-radius:8px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" style="transform:rotate(180deg)"><use href="#i-arrow"></use></svg></button>
+          <span style="height:36px;padding:0 16px;display:flex;align-items:center;border:1px solid rgba(100,116,139,.3);border-radius:8px;background:#fff;font-weight:var(--fw-strong,600);font-size:14px;min-width:150px;justify-content:center">{{ tk.monthLabel }}</span>
+          <button sc-camel-on-click="{{ tk.nextMonth }}" aria-label="Next month" style="width:36px;height:36px;border:1px solid rgba(100,116,139,.3);border-radius:8px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="16" height="16"><use href="#i-arrow"></use></svg></button>
+          <button sc-camel-on-click="{{ tk.thisMonth }}" style="height:36px;padding:0 14px;border:1px solid rgba(100,116,139,.3);border-radius:8px;background:#fff;cursor:pointer;font-size:12px;font-weight:var(--fw-strong,600)">This month</button>
+          <button sc-camel-on-click="{{ tk.allMonths }}" style="height:36px;padding:0 14px;border:1px solid rgba(100,116,139,.3);border-radius:8px;background:{{ tk.allMBg }};color:{{ tk.allMFg }};cursor:pointer;font-size:12px;font-weight:var(--fw-strong,600)">All months</button>
+          <sc-if value="{{ tk.hasMonthNote }}"><span style="font-size:12px;color:#B91C1C">{{ tk.monthNote }} <a href="#" sc-camel-on-click="{{ tk.allMonthsLink }}" style="font-weight:var(--fw-strong,600)">Show all months</a></span></sc-if>
+        </div>
         <sc-if value="{{ tk.showRec }}">
           <div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;margin-bottom:12px;overflow:hidden">
             <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:12px 16px;border-bottom:1px solid #F1F5F9"><span style="flex:1;font-size:14px;font-weight:var(--fw-strong,600)">Recurring tasks</span><span style="font-size:12px;color:#64748B">A new task is added automatically on each day it repeats.</span></div>
@@ -2873,7 +2881,7 @@ const freshWorkspace=(name,email,company)=>{ const pid='p'+Date.now().toString(3
 
 class Component extends DCLogic {
   state = { view:(this.props.startView==='people'?null:this.props.startView) ?? 'dashboard', clientId:'', tab:'overview', menuOpen:false, w:window.innerWidth,
-    viewAs:'', feat:FEAT0, cYM:TODAY.slice(0,7), tq:'', tWho:'all', tStatus:'all', tPri:'all', tBrand:'all', tSortAsc:false, tMode:'table', tDept:'all', sheetCols:[], sheetW:{}, tdepts:TDEPTS0, ledger:L0, tasks:TASK0, grants:GRANTS0, audit:AUDIT0, people:PEOPLE0, clients:CLIENTS0, brands:BRANDS0, depts:DEPTS0, expCats:EXPCATS0, incCats:INCCATS0, leaves:LEAVE0,
+    viewAs:'', feat:FEAT0, cYM:TODAY.slice(0,7), tq:'', tWho:'all', tStatus:'all', tPri:'all', tBrand:'all', tSortAsc:false, tMode:'table', tDept:'all', tYM:TODAY.slice(0,7), sheetCols:[], sheetW:{}, tdepts:TDEPTS0, ledger:L0, tasks:TASK0, grants:GRANTS0, audit:AUDIT0, people:PEOPLE0, clients:CLIENTS0, brands:BRANDS0, depts:DEPTS0, expCats:EXPCATS0, incCats:INCCATS0, leaves:LEAVE0,
     q:'', searchOpen:false, addOpen:false, brandFilter:'all', sort:'margin', assignee:'all', auditFilter:'all', deptFilter:'all',
     calYM:TODAY.slice(0,7), selDay:TODAY, teamTab:'members', payYM:TODAY.slice(0,7), noteText:'', calWho:'all', calBrand:'all', calStatus:'all',
     lgYM:TODAY.slice(0,7), kpiYM:TODAY.slice(0,7), kpiAll:true, lgType:'all', lgBrand:'all',
@@ -3501,10 +3509,16 @@ class Component extends DCLogic {
 
     // tasks table
     const tql=s.tq.trim().toLowerCase(), canVerify=isOwner||s.viewAs==='p2';
-    const tl=vTasks.filter(t=>(s.tWho==='all'||t.who===s.tWho)&&(s.tStatus==='all'||(s.tStatus==='late'?this.stOf(t)==='late':t.status===s.tStatus))&&(s.tPri==='all'||t.pri===s.tPri)&&(s.tBrand==='all'||t.brand===s.tBrand)&&(s.tDept==='all'||(t.dept||'mkt')===s.tDept)&&(!tql||t.title.toLowerCase().includes(tql)||this.tagOf(t).toLowerCase().includes(tql)))
+    // A task belongs to the month it is due in, or the month it was created if it has no due date.
+    const tMon=t=>(t.due||t.created||'').slice(0,7), allM=s.tYM==='all', curYM=allM?TODAY.slice(0,7):s.tYM;
+    const lateElse=allM?0:vTasks.filter(t=>tMon(t)!==s.tYM&&t.status!=='done'&&this.lateDays(t)>0).length;
+    const tl=vTasks.filter(t=>(allM||tMon(t)===s.tYM)&&(s.tWho==='all'||t.who===s.tWho)&&(s.tStatus==='all'||(s.tStatus==='late'?this.stOf(t)==='late':t.status===s.tStatus))&&(s.tPri==='all'||t.pri===s.tPri)&&(s.tBrand==='all'||t.brand===s.tBrand)&&(s.tDept==='all'||(t.dept||'mkt')===s.tDept)&&(!tql||t.title.toLowerCase().includes(tql)||this.tagOf(t).toLowerCase().includes(tql)))
       .sort((a,b)=>{const r=(a.created||'').localeCompare(b.created||'')||(a.due||'').localeCompare(b.due||''); return s.tSortAsc?r:-r;});
     const lateN=tl.filter(t=>this.lateDays(t)>0).length;
-    const tk={q:s.tq,onQ:e=>this.setState({tq:e.target.value}),who:s.tWho,onWho:e=>this.setState({tWho:e.target.value}),status:s.tStatus,onStatus:e=>this.setState({tStatus:e.target.value}),
+    const tk={q:s.tq,onQ:e=>this.setState({tq:e.target.value}),
+      monthLabel:allM?'All months':ymLabel(s.tYM),prevMonth:()=>this.setState({tYM:ymAdd(curYM,-1)}),nextMonth:()=>this.setState({tYM:ymAdd(curYM,1)}),
+      thisMonth:()=>this.setState({tYM:TODAY.slice(0,7)}),allMonths:()=>this.setState({tYM:'all'}),allMonthsLink:e=>{e.preventDefault(); this.setState({tYM:'all'});},allMBg:allM?'#111827':'#fff',allMFg:allM?'#fff':'#0F172A',
+      hasMonthNote:lateElse>0,monthNote:lateElse+(lateElse===1?' late task from another month is hidden.':' late tasks from other months are hidden.'),who:s.tWho,onWho:e=>this.setState({tWho:e.target.value}),status:s.tStatus,onStatus:e=>this.setState({tStatus:e.target.value}),
       pri:s.tPri,onPri:e=>this.setState({tPri:e.target.value}),brand:s.tBrand,onBrand:e=>this.setState({tBrand:e.target.value}),
       dept:s.tDept,onDept:e=>{ const v=e.target.value; if(v===ADD) return this.openQuick('tdept','none','dept'); this.setState({tDept:v}); },isTable:s.tMode==='table',isBoard:s.tMode==='board',isSheet:s.tMode==='sheet',toSheet:()=>this.setState({tMode:'sheet'}),sheetBg:s.tMode==='sheet'?'#fff':'transparent',sheetFg:s.tMode==='sheet'?'#0F172A':'#64748B',sheet:this.sheetVals(tl),
       toList:()=>this.setState({tMode:'table'}),toBoard:()=>this.setState({tMode:'board'}),addDept:()=>this.openQuick('tdept','none','dept'),listBg:s.tMode==='table'?'#fff':'transparent',listFg:s.tMode==='table'?'#0F172A':'#64748B',boardBg:s.tMode==='board'?'#fff':'transparent',boardFg:s.tMode==='board'?'#0F172A':'#64748B',
