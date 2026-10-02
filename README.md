@@ -28,6 +28,21 @@ Owner Team member add/edit karte waqt **Work email** aur **Login password** bhar
 
 Password ke bina sirf email daalne par member khud website par usi email se Sign up karke jud sakta hai.
 
+## Notifications aur Web Push
+
+Kisi ko task assign hote hi us member ko app me notification milta hai (ghanti 🔔). Ghanti me **Turn on** dabane par us device par Web Push chalu ho jata hai, aur app band hone par bhi phone/computer par alert aata hai. iPhone par pehle site ko Share → Add to Home Screen karna hota hai, phir wahan se app kholkar Turn on.
+
+Kaise: notification save hone ke baad assign karne wale ka browser `POST /api/push` (Vercel function, `api/push.js`) call karta hai. Function check karta hai ki caller usi workspace ka member hai aur notification usi ne banaya hai, phir `app_push_subs` me saved devices par push bhejta hai (har notification sirf ek baar, `app_push_log`).
+
+Vercel → Settings → Environment Variables me ye do daalo (Production), phir redeploy:
+
+| Name | Value |
+| --- | --- |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API Keys → `service_role` / secret key |
+| `VAPID_PRIVATE_KEY` | Local `.env` file me hai (git me nahi) |
+
+`VAPID_PUBLIC_KEY` [push-config.js](push-config.js) me commit hai. Keys badalni ho to `npx web-push generate-vapid-keys` chalao, public key `push-config.js` me aur private key Vercel me daalo; tab sab devices ko dobara Turn on karna hoga.
+
 ## Data model
 
 - `app_workspaces`: ek row per workspace.

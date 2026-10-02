@@ -3,6 +3,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Operations Workspace</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#5B5BD6">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Operations">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%235B5BD6%22/%3E%3Ctext x=%2216%22 y=%2222%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2216%22 font-weight=%22600%22 fill=%22white%22%3EO%3C/text%3E%3C/svg%3E">
 <script>window.__resources={"https://unpkg.com/react@18.3.1/umd/react.production.min.js":"vendor/react.production.min.js","https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js":"vendor/react-dom.production.min.js"};</script>
 <script src="config.js"></script>
@@ -1612,8 +1618,10 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid r
           <div sc-camel-on-click="{{ nb.close }}" style="position:fixed;inset:0;z-index:19"></div>
           <div style="position:absolute;right:0;top:48px;width:min(340px,calc(100vw - 32px));max-height:420px;overflow:auto;background:#fff;border:1px solid rgba(100,116,139,.25);border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.14);z-index:20;animation:opRise 200ms ease">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid #F1F5F9"><span style="font-size:14px;font-weight:var(--fw-strong,600)">Notifications</span><sc-if value="{{ nb.hasUnread }}"><button sc-camel-on-click="{{ nb.readAll }}" style="border:0;background:transparent;color:#5B5BD6;font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer">Mark all as read</button></sc-if></div>
-            <sc-if value="{{ nb.canAsk }}"><div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;font-size:12px;color:#334155"><span style="flex:1">Get desktop alerts when a task is assigned to you.</span><button sc-camel-on-click="{{ nb.ask }}" style="height:28px;padding:0 10px;border:0;border-radius:6px;background:#5B5BD6;color:#fff;font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer">Turn on</button></div></sc-if>
+            <sc-if value="{{ nb.canAsk }}"><div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;font-size:12px;color:#334155"><span style="flex:1">{{ nb.askText }}</span><button sc-camel-on-click="{{ nb.ask }}" style="height:28px;padding:0 10px;border:0;border-radius:6px;background:#5B5BD6;color:#fff;font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer">Turn on</button></div></sc-if>
             <sc-if value="{{ nb.denied }}"><div style="padding:10px 14px;background:#FFFBEB;border-bottom:1px solid #F1F5F9;font-size:12px;color:#92400E">Desktop alerts are blocked in this browser. Allow notifications for this site in the browser settings.</div></sc-if>
+            <sc-if value="{{ nb.isOn }}"><div style="padding:8px 14px;background:#F0FDF4;border-bottom:1px solid #F1F5F9;font-size:12px;color:#166534">Alerts are on for this device, even when the app is closed.</div></sc-if>
+            <sc-if value="{{ nb.ios }}"><div style="padding:10px 14px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;font-size:12px;color:#334155;line-height:1.5">On iPhone: tap Share, then Add to Home Screen. Open the app from the Home Screen and turn on alerts here.</div></sc-if>
             <sc-for list="{{ nb.items }}" as="n">
               <button sc-camel-on-click="{{ n.go }}" style="display:flex;gap:10px;width:100%;padding:10px 14px;border:0;border-bottom:1px solid #F1F5F9;background:{{ n.bg }};cursor:pointer;text-align:left" style-hover="background:rgba(91,91,214,.08)">
                 <span style="width:8px;height:8px;margin-top:5px;border-radius:50%;background:{{ n.dot }};flex-shrink:0"></span>
@@ -2899,7 +2907,7 @@ const freshWorkspace=(name,email,company)=>{ const pid='p'+Date.now().toString(3
 
 class Component extends DCLogic {
   state = { view:(this.props.startView==='people'?null:this.props.startView) ?? 'dashboard', clientId:'', tab:'overview', menuOpen:false, w:window.innerWidth,
-    viewAs:'', feat:FEAT0, cYM:TODAY.slice(0,7), tq:'', tWho:'all', tStatus:'all', tPri:'all', tBrand:'all', tSortAsc:false, tMode:'table', tDept:'all', tYM:TODAY.slice(0,7), notifs:[], notifOpen:false, myEmail:'', sheetCols:[], sheetW:{}, tdepts:TDEPTS0, ledger:L0, tasks:TASK0, grants:GRANTS0, audit:AUDIT0, people:PEOPLE0, clients:CLIENTS0, brands:BRANDS0, depts:DEPTS0, expCats:EXPCATS0, incCats:INCCATS0, leaves:LEAVE0,
+    viewAs:'', feat:FEAT0, cYM:TODAY.slice(0,7), tq:'', tWho:'all', tStatus:'all', tPri:'all', tBrand:'all', tSortAsc:false, tMode:'table', tDept:'all', tYM:TODAY.slice(0,7), notifs:[], notifOpen:false, myEmail:'', pushOn:false, sheetCols:[], sheetW:{}, tdepts:TDEPTS0, ledger:L0, tasks:TASK0, grants:GRANTS0, audit:AUDIT0, people:PEOPLE0, clients:CLIENTS0, brands:BRANDS0, depts:DEPTS0, expCats:EXPCATS0, incCats:INCCATS0, leaves:LEAVE0,
     q:'', searchOpen:false, addOpen:false, brandFilter:'all', sort:'margin', assignee:'all', auditFilter:'all', deptFilter:'all',
     calYM:TODAY.slice(0,7), selDay:TODAY, teamTab:'members', payYM:TODAY.slice(0,7), noteText:'', calWho:'all', calBrand:'all', calStatus:'all',
     lgYM:TODAY.slice(0,7), kpiYM:TODAY.slice(0,7), kpiAll:true, lgType:'all', lgBrand:'all',
@@ -2917,6 +2925,7 @@ class Component extends DCLogic {
     this._bu=e=>{ if(this._pending.size||this._flushing){ e.preventDefault(); e.returnValue=''; } }; window.addEventListener('beforeunload',this._bu);
     this._vis=()=>{ if(document.visibilityState==='hidden'){ this._hiddenAt=Date.now(); this.flush(); } else if(this._hiddenAt&&Date.now()-this._hiddenAt>60000) this.resync(); };
     document.addEventListener('visibilitychange',this._vis);
+    Cl.onOpenUrl(u=>this.openFromUrl(u));
     Cl.onAuth(ev=>{ if(ev==='PASSWORD_RECOVERY') this.setState({auth:'reset',aerr:{},aBusy:false,notice:''}); });
     Cl.user().then(u=>{ if(Cl.isRecovery()) return this.setState({auth:'reset'}); if(u) this.wsOpen(u); else this.setState({auth:'login'}); }).catch(()=>this.setState({auth:'login'})); }
   async wsOpen(u){ const Cl=window.Cloud; this._uid=u.id; this.setState({auth:'loading',aBusy:false,myEmail:(u.email||'').toLowerCase()});
@@ -2936,6 +2945,8 @@ class Component extends DCLogic {
     this.setState({...data,ws:w.workspace_id,wsName:w.name,wsList:list,me,viewAs:me,auth:null,aBusy:false,notice:'',view:'dashboard',drawer:null,modal:null,menuOpen:false,clientId:'',aerr:{},af:{...this.state.af,password:'',confirm:''},sync:'saved'});
     this._unsub=Cl.subscribe(w.workspace_id,r=>this.applyRemote(r),st=>{ if(st==='SUBSCRIBED'){ if(this._live) this.resync(); this._live=true; if(this.state.sync==='offline') this.setState({sync:'saved'}); } else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT') this.setState({sync:'offline'}); });
     setTimeout(()=>this.rollSeries(),0);
+    Cl.syncPush().then(on=>{ if(this.state.ws===w.workspace_id) this.setState({pushOn:on}); });
+    this.openFromUrl(location.href);
     if((data.owners||[]).includes(me)){ this._memDirty=true; clearTimeout(this._ft); this._ft=setTimeout(()=>this.flush(),1500); }
     this.toast('Welcome'+(first?', '+first:'')+'.'); }
   queueSync(){ const s=this.state; if(!s.ws||!this._synced) return; let n=0;
@@ -2948,6 +2959,8 @@ class Component extends DCLogic {
     if(!rows.length&&!this._memDirty) return;
     this._flushing=true;
     try{ if(rows.length) await window.Cloud.saveRows(ws,rows);
+      const pushIds=this._pushQ?rows.filter(r=>r.coll==='notifs'&&!r.deleted&&this._pushQ.has(r.id)).map(r=>r.id):[];
+      if(pushIds.length){ pushIds.forEach(id=>this._pushQ.delete(id)); window.Cloud.sendPush(ws,pushIds); }
       if(this._memDirty){ this._memDirty=false; await this.membersSync(); }
       this._errShown=false; if(this.state.ws===ws) this.setState({sync:this._pending.size?'saving':'saved'}); }
     catch(e){ console.error(e); rows.forEach(r=>{ const k=pkey(r.coll,r.id); if(!this._pending.has(k)) this._pending.set(k,r); });
@@ -2979,9 +2992,10 @@ class Component extends DCLogic {
     }catch(e){ console.error('member sync',e); this._memDirty=true; this._members=null; } }
   async logout(){ this.queueSync(); await this.flush();
     if(this._pending.size&&!window.confirm('Some changes are not saved yet. Log out anyway?')) return;
+    await window.Cloud.disablePush();
     try{ await window.Cloud.signOut(); }catch(e){ console.error(e); } this.wsClose(); }
   wsClose(){ if(this._unsub) this._unsub(); this._unsub=null; this._synced=null; this._pending=new Map(); this._members=null; clearTimeout(this._ft);
-    this.setState({...emptyData(),ws:null,wsName:'',wsList:[],me:'',viewAs:'',auth:'login',notice:'',drawer:null,modal:null,menuOpen:false,aBusy:false,aerr:{},af:{...this.state.af,password:'',confirm:''},sync:'idle'}); }
+    this.setState({...emptyData(),ws:null,wsName:'',wsList:[],me:'',viewAs:'',auth:'login',notice:'',drawer:null,modal:null,menuOpen:false,aBusy:false,aerr:{},af:{...this.state.af,password:'',confirm:''},sync:'idle',pushOn:false,notifOpen:false}); }
   async switchWs(id){ const s=this.state, w=(s.wsList||[]).find(x=>x.workspace_id===id); if(!w||id===s.ws) return;
     this.queueSync(); await this.flush();
     try{ await this.wsLoad(w,s.wsList); }catch(e){ this.setState({auth:null}); this.toast(window.Cloud.errText(e)); } }
@@ -3086,12 +3100,19 @@ class Component extends DCLogic {
   // ---------- Notifications ----------
   notify(to,text,taskId){ const s=this.state; if(!to||to===s.me||!s.ws||!s.people.some(p=>p.id===to&&p.team)) return;
     const n={id:this.newId('nt'),to,text,task:taskId||null,by:s.me,at:nowTs(),read:false};
+    (this._pushQ=this._pushQ||new Set()).add(n.id);
     this.setState(z=>({notifs:[n,...(z.notifs||[])].slice(0,300)})); }
   alertNotif(n){ this.toast(n.text);
-    try{ if(document.visibilityState!=='visible'&&'Notification' in window&&Notification.permission==='granted'){
+    try{ if(!this.state.pushOn&&document.visibilityState!=='visible'&&'Notification' in window&&Notification.permission==='granted'){
       const x=new Notification(this.state.wsName||'Operations',{body:n.text,tag:n.id}); x.onclick=()=>{ window.focus(); this.openNotif(n); x.close(); }; } }catch(e){} }
   openNotif(n){ this.setState(z=>({notifOpen:false,notifs:(z.notifs||[]).map(x=>x.id===n.id&&!x.read?{...x,read:true}:x)}));
     if(n.task&&this.state.tasks.some(t=>t.id===n.task)) this.openTask(n.task); }
+  async enablePush(){ try{ await window.Cloud.enablePush(); this.setState({pushOn:true}); this.toast('Alerts are on for this device.'); }
+    catch(e){ this.toast((e&&e.message)||'Could not turn on alerts.'); this.forceUpdate(); } }
+  openFromUrl(url){ let id=null; try{ id=new URL(url,location.origin).searchParams.get('task'); }catch(e){} if(!id) return;
+    try{ history.replaceState(null,'',location.pathname); }catch(e){}
+    this.setState(z=>({notifs:(z.notifs||[]).map(x=>x.to===z.me&&x.task===id&&!x.read?{...x,read:true}:x)}));
+    if(this.state.tasks.some(x=>x.id===id)) this.openTask(id); }
   readAllNotifs(){ const me=this.state.me; this.setState(z=>({notifs:(z.notifs||[]).map(x=>x.to===me&&!x.read?{...x,read:true}:x)})); }
   async askNotifPermission(){ try{ await Notification.requestPermission(); }catch(e){} this.forceUpdate(); }
   async setLogin(email,pw,pid,name){ const s=this.state, Cl=window.Cloud; if(!s.ws||!Cl||!Cl.enabled) return;
@@ -3755,9 +3776,10 @@ class Component extends DCLogic {
 
     return {
       authOn:!!s.auth,au,im:imv,logout:()=>this.logout(),openProfile:()=>this.openModal('profile'),wsName:s.wsName||'Workspace',
-      nb:(()=>{ const mine=(s.notifs||[]).filter(n=>n.to===s.me), un=mine.filter(n=>!n.read).length, perm=('Notification' in window)?Notification.permission:'unsupported';
+      nb:(()=>{ const mine=(s.notifs||[]).filter(n=>n.to===s.me), un=mine.filter(n=>!n.read).length, perm=('Notification' in window)?Notification.permission:'unsupported', ps=window.Cloud&&window.Cloud.enabled?window.Cloud.pushStatus(s.pushOn):'unsupported';
         return {has:un>0,badge:un>9?'9+':String(un),open:!!s.notifOpen,toggle:()=>this.setState(z=>({notifOpen:!z.notifOpen,addOpen:false})),close:()=>this.setState({notifOpen:false}),
-          empty:!mine.length,hasUnread:un>0,readAll:()=>this.readAllNotifs(),canAsk:perm==='default',ask:()=>this.askNotifPermission(),denied:perm==='denied',
+          empty:!mine.length,hasUnread:un>0,readAll:()=>this.readAllNotifs(),canAsk:ps==='off'||(ps==='unsupported'&&perm==='default'),ask:ps==='off'?()=>this.enablePush():()=>this.askNotifPermission(),denied:ps==='denied'||perm==='denied',isOn:ps==='on',ios:ps==='ios-install',
+          askText:ps==='off'?'Get alerts on this device when a task is assigned to you, even when the app is closed.':'Get desktop alerts when a task is assigned to you.',
           items:mine.slice(0,30).map(n=>({text:n.text,at:fmtTsS(n.at),bg:n.read?'#fff':'rgba(91,91,214,.06)',dot:n.read?'transparent':'#5B5BD6',go:()=>this.openNotif(n)}))}; })(),wsMulti:(s.wsList||[]).length>1,wsId:s.ws||'',wsOptions:(s.wsList||[]).map(w=>({id:w.workspace_id,label:w.name})),onWs:e=>this.switchWs(e.target.value),
       syncText:{saving:'Saving…',saved:'All changes saved',error:'Not saved yet, retrying…',offline:'Reconnecting…'}[s.sync]||'',syncColor:s.sync==='error'||s.sync==='offline'?'#D97706':s.sync==='saved'?'#16A34A':'#94A3B8',
       onAuth:e=>{const {name,type,checked,value}=e.target; this.setState(z=>({af:{...z.af,[name]:type==='checkbox'?checked:value},aerr:{...z.aerr,[name]:''}}));},

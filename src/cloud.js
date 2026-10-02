@@ -92,8 +92,73 @@
     return () => { sb.removeChannel(ch); };
   }
 
+  // ---------- Web Push ----------
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const pushSupported = !!(enabled && cfg.vapidPublicKey && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext);
+  const swReady = 'serviceWorker' in navigator && window.isSecureContext
+    ? navigator.serviceWorker.register('/sw.js').catch((e) => { console.warn('service worker', e); return null; })
+    : Promise.resolve(null);
+  const b64ToBytes = (s) => {
+    const b = atob((s + '='.repeat((4 - (s.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(b, (c) => c.charCodeAt(0));
+  };
+  async function currentSub(create) {
+    const reg = (await swReady) && (await navigator.serviceWorker.ready);
+    if (!reg) return null;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub && create) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(cfg.vapidPublicKey) });
+    return sub;
+  }
+  async function saveSub(sub) {
+    const j = sub.toJSON();
+    must(await sb.rpc('app_save_push_sub', { p_endpoint: j.endpoint, p_sub: j }));
+  }
+
   window.Cloud = {
     enabled,
+    // 'on' | 'off' (can be turned on) | 'denied' | 'ios-install' (iPhone: add to Home Screen first) | 'unsupported'
+    pushStatus(on) {
+      if (!pushSupported) return isIOS && !standalone && enabled ? 'ios-install' : 'unsupported';
+      if (Notification.permission === 'denied') return 'denied';
+      return on ? 'on' : 'off';
+    },
+    // Turns alerts on for this device (asks for permission). Returns true when on.
+    async enablePush() {
+      if (!pushSupported) throw new Error(isIOS && !standalone ? 'On iPhone, add this site to the Home Screen first, then open it from there.' : 'This browser does not support alerts.');
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') throw new Error('Alerts were not allowed in this browser.');
+      await saveSub(await currentSub(true));
+      return true;
+    },
+    // On login: if this device already allowed alerts, make sure it is saved for this user.
+    async syncPush() {
+      if (!pushSupported || Notification.permission !== 'granted') return false;
+      try { await saveSub(await currentSub(true)); return true; } catch (e) { console.warn('push sync', e); return false; }
+    },
+    // On logout: stop alerts for this device.
+    async disablePush() {
+      if (!pushSupported) return;
+      try {
+        const sub = await currentSub(false);
+        if (!sub) return;
+        await sb.from('app_push_subs').delete().eq('endpoint', sub.endpoint);
+        await sub.unsubscribe();
+      } catch (e) { console.warn('push off', e); }
+    },
+    // Asks the server to push the given (already saved) notifications to their recipients.
+    async sendPush(ws, ids) {
+      try {
+        const { data } = await sb.auth.getSession();
+        const token = data && data.session && data.session.access_token;
+        if (!token || !ids.length) return;
+        const r = await fetch('/api/push', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token }, body: JSON.stringify({ ws, ids }) });
+        if (!r.ok) console.warn('push', r.status, await r.text());
+      } catch (e) { console.warn('push', e); }
+    },
+    onOpenUrl(fn) {
+      if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', (e) => { if (e.data && e.data.type === 'open-url') fn(e.data.url); });
+    },
     clientId,
     errText,
     isRecovery: () => recovery,

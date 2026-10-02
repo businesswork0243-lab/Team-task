@@ -4,6 +4,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } fr
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { VAPID_PUBLIC_KEY } from './push-config.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const src = join(root, 'src');
@@ -31,7 +32,7 @@ cpSync(supabaseUmd, join(dist, 'vendor', 'supabase.js'));
 
 writeFileSync(
   join(dist, 'config.js'),
-  'window.APP_CONFIG = ' + JSON.stringify({ supabaseUrl: url, supabaseAnonKey: anonKey }) + ';\n'
+  'window.APP_CONFIG = ' + JSON.stringify({ supabaseUrl: url, supabaseAnonKey: anonKey, vapidPublicKey: process.env.VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY }) + ';\n'
 );
 
 console.log(

@@ -214,6 +214,47 @@ grant execute on function public.app_my_workspaces() to authenticated;
 grant execute on function public.app_create_workspace(text, text) to authenticated;
 
 -- ---------------------------------------------------------------------
+-- Web Push: one row per browser/device that turned on alerts.
+-- The /api/push function (service role) reads these; users only see
+-- and remove their own.
+-- ---------------------------------------------------------------------
+create table if not exists public.app_push_subs (
+  endpoint   text primary key,
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  sub        jsonb not null,
+  updated_at timestamptz not null default now()
+);
+create index if not exists app_push_subs_user_idx on public.app_push_subs(user_id);
+alter table public.app_push_subs enable row level security;
+drop policy if exists push_select on public.app_push_subs;
+drop policy if exists push_delete on public.app_push_subs;
+create policy push_select on public.app_push_subs for select to authenticated using (user_id = auth.uid());
+create policy push_delete on public.app_push_subs for delete to authenticated using (user_id = auth.uid());
+
+-- Saves this device for the signed-in user (a shared device moves to whoever signed in last).
+create or replace function public.app_save_push_sub(p_endpoint text, p_sub jsonb)
+returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'not signed in'; end if;
+  if coalesce(p_endpoint, '') !~ '^https://' then raise exception 'invalid push endpoint'; end if;
+  insert into app_push_subs (endpoint, user_id, sub, updated_at)
+    values (p_endpoint, auth.uid(), p_sub, now())
+  on conflict (endpoint) do update set user_id = auth.uid(), sub = excluded.sub, updated_at = now();
+end $$;
+revoke all on function public.app_save_push_sub(text, jsonb) from public, anon;
+grant execute on function public.app_save_push_sub(text, jsonb) to authenticated;
+
+-- Which notifications already went out as a push (no policies: service role only).
+create table if not exists public.app_push_log (
+  workspace_id uuid not null,
+  notif_id     text not null,
+  sent_at      timestamptz not null default now(),
+  primary key (workspace_id, notif_id)
+);
+alter table public.app_push_log enable row level security;
+
+-- ---------------------------------------------------------------------
 -- Realtime: push app_items changes to everyone in the workspace
 -- ---------------------------------------------------------------------
 do $$
