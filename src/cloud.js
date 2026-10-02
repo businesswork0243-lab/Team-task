@@ -129,6 +129,10 @@
     async upsertMembers(ws, rows) {
       must(await sb.from('app_members').upsert(rows.map((r) => ({ ...r, workspace_id: ws })), { onConflict: 'workspace_id,email' }));
     },
+    async renameWorkspace(ws, name) {
+      const rows = must(await sb.from('app_workspaces').update({ name }).eq('id', ws).select('id'));
+      if (!rows || !rows.length) throw new Error('Only a workspace owner can rename the workspace.');
+    },
     async setMemberLogin(ws, email, password, personId, name) {
       return must(await sb.rpc('app_set_member_login', { p_ws: ws, p_email: email, p_password: password, p_person_id: personId, p_name: name || null }));
     },

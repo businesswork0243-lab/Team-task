@@ -1528,7 +1528,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid r
 <symbol id="i-users" sc-camel-view-box="0 0 24 24" fill="none" style="stroke:var(--icon-stroke,currentColor)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.4 3.4-5.5 6.5-5.5s5.7 2.1 6.5 5.5M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.6 2.6 3 5.2"></path></symbol>
 <symbol id="i-network" sc-camel-view-box="0 0 24 24" fill="none" style="stroke:var(--icon-stroke,currentColor)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="10.5" r="2.5"></circle><path d="M5.5 17c.6-1.7 1.9-2.5 3.5-2.5s2.9.8 3.5 2.5M15 10h3M15 14h3"></path></symbol>
 <symbol id="i-doc" sc-camel-view-box="0 0 24 24" fill="none" style="stroke:var(--icon-stroke,currentColor)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-2.5-1.5L14 21l-2-1.5L10 21l-2.5-1.5L5 21zM9 8h6M9 12h6M9 16h3"></path></symbol>
-<symbol id="i-check" sc-camel-view-box="0 0 24 24" fill="none" style="stroke:var(--icon-stroke,currentColor)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"></rect><path d="M8 12.5l2.5 2.5L16 9.5"></path></symbol>
+<symbol id="i-bell" sc-camel-view-box="0 0 24 24" fill="none" style="stroke:var(--icon-stroke,currentColor)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></symbol><symbol id="i-check" sc-camel-view-box="0 0 24 24" fill="none" style="stroke:var(--icon-stroke,currentColor)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"></rect><path d="M8 12.5l2.5 2.5L16 9.5"></path></symbol>
 <symbol id="i-key" sc-camel-view-box="0 0 24 24" fill="none" style="stroke:var(--icon-stroke,currentColor)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"></circle><path d="M11 12l9-9M16 7l3 3M14 9l2 2"></path></symbol>
 <symbol id="i-shield" sc-camel-view-box="0 0 24 24" fill="none" style="stroke:var(--icon-stroke,currentColor)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"></path><path d="M9 12l2 2 4-4"></path></symbol>
 <symbol id="i-search" sc-camel-view-box="0 0 24 24" fill="none" style="stroke:var(--icon-stroke,currentColor)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></symbol>
@@ -1544,7 +1544,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid r
   </sc-if>
 
   <aside style="width:240px;flex-shrink:0;display:flex;flex-direction:column;background:{{ sb.bg }};color:{{ sb.fg }};border-right:1px solid rgba(100,116,139,.2);position:{{ sb.position }};top:0;left:0;bottom:0;z-index:30;transform:{{ sb.transform }};transition:transform 200ms ease;--icon-stroke:{{ sb.icon }};--icon-accent:#5B5BD6">
-    <div style="display:flex;align-items:center;gap:10px;padding:22px 20px 18px">
+    <div sc-camel-on-click="{{ openProfile }}" title="Your profile" style="display:flex;align-items:center;gap:10px;padding:22px 20px 18px;cursor:pointer" style-hover="background:{{ sb.hover }}">
       <span style="width:32px;height:32px;border-radius:9px;background:#5B5BD6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:var(--fw-strong,600);font-size:15px;flex-shrink:0">O</span>
       <div style="display:flex;flex-direction:column;line-height:1.2">
         <span style="font-weight:var(--fw-strong,600);font-size:15px">Operations</span>
@@ -1603,6 +1603,24 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid r
               </button>
             </sc-for>
             <sc-if value="{{ noResults }}"><div style="padding:10px;font-size:13px;color:#64748B">No matches you have access to.</div></sc-if>
+          </div>
+        </sc-if>
+      </div>
+      <div style="position:relative">
+        <button sc-camel-on-click="{{ nb.toggle }}" aria-label="Notifications" style="position:relative;width:40px;height:40px;border:1px solid rgba(100,116,139,.3);border-radius:999px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;--icon-stroke:#0F172A" style-hover="background:#F8FAFC"><svg width="18" height="18"><use href="#i-bell"></use></svg><sc-if value="{{ nb.has }}"><span style="position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#DC2626;color:#fff;font-size:10px;font-weight:var(--fw-strong,600);display:flex;align-items:center;justify-content:center;box-sizing:border-box">{{ nb.badge }}</span></sc-if></button>
+        <sc-if value="{{ nb.open }}">
+          <div sc-camel-on-click="{{ nb.close }}" style="position:fixed;inset:0;z-index:19"></div>
+          <div style="position:absolute;right:0;top:48px;width:min(340px,calc(100vw - 32px));max-height:420px;overflow:auto;background:#fff;border:1px solid rgba(100,116,139,.25);border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.14);z-index:20;animation:opRise 200ms ease">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid #F1F5F9"><span style="font-size:14px;font-weight:var(--fw-strong,600)">Notifications</span><sc-if value="{{ nb.hasUnread }}"><button sc-camel-on-click="{{ nb.readAll }}" style="border:0;background:transparent;color:#5B5BD6;font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer">Mark all as read</button></sc-if></div>
+            <sc-if value="{{ nb.canAsk }}"><div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;font-size:12px;color:#334155"><span style="flex:1">Get desktop alerts when a task is assigned to you.</span><button sc-camel-on-click="{{ nb.ask }}" style="height:28px;padding:0 10px;border:0;border-radius:6px;background:#5B5BD6;color:#fff;font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer">Turn on</button></div></sc-if>
+            <sc-if value="{{ nb.denied }}"><div style="padding:10px 14px;background:#FFFBEB;border-bottom:1px solid #F1F5F9;font-size:12px;color:#92400E">Desktop alerts are blocked in this browser. Allow notifications for this site in the browser settings.</div></sc-if>
+            <sc-for list="{{ nb.items }}" as="n">
+              <button sc-camel-on-click="{{ n.go }}" style="display:flex;gap:10px;width:100%;padding:10px 14px;border:0;border-bottom:1px solid #F1F5F9;background:{{ n.bg }};cursor:pointer;text-align:left" style-hover="background:rgba(91,91,214,.08)">
+                <span style="width:8px;height:8px;margin-top:5px;border-radius:50%;background:{{ n.dot }};flex-shrink:0"></span>
+                <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;line-height:1.4">{{ n.text }}</span><span style="font-size:11px;color:#64748B">{{ n.at }}</span></span>
+              </button>
+            </sc-for>
+            <sc-if value="{{ nb.empty }}"><div style="padding:24px 14px;font-size:13px;color:#64748B;text-align:center">No notifications yet. You will see tasks assigned to you here.</div></sc-if>
           </div>
         </sc-if>
       </div>
@@ -2860,12 +2878,12 @@ const ADD = '__add';
 
 // ---------- Cloud sync (Supabase, see cloud.js) ----------
 // Each synced state key is stored as rows in app_items: lists and maps row per record, docs as one row.
-const SYNC={tasks:'list',ledger:'list',clients:'list',people:'list',leaves:'list',series:'list',audit:'list',grants:'map',feat:'map',
+const SYNC={tasks:'list',ledger:'list',clients:'list',people:'list',leaves:'list',series:'list',audit:'list',notifs:'list',grants:'map',feat:'map',
   brands:'doc',tdepts:'doc',depts:'doc',expCats:'doc',incCats:'doc',sheetCols:'doc',relTypes:'doc',owners:'doc',partners:'doc'};
-const PREPEND=new Set(['ledger','audit','leaves']);
+const PREPEND=new Set(['ledger','audit','leaves','notifs']);
 const pkey=(coll,id)=>coll+'\u0001'+id;
 const same=(a,b)=>a===b||JSON.stringify(a)===JSON.stringify(b);
-const emptyData=()=>({tasks:[],ledger:[],clients:[],people:[],leaves:[],series:[],audit:[],grants:{},feat:{},brands:BRANDS0,tdepts:TDEPTS0,depts:DEPTS0,expCats:EXPCATS0,incCats:INCCATS0,sheetCols:[],relTypes:[],owners:[],partners:[]});
+const emptyData=()=>({tasks:[],ledger:[],clients:[],people:[],leaves:[],series:[],audit:[],notifs:[],grants:{},feat:{},brands:BRANDS0,tdepts:TDEPTS0,depts:DEPTS0,expCats:EXPCATS0,incCats:INCCATS0,sheetCols:[],relTypes:[],owners:[],partners:[]});
 const diffKey=(k,a,b,emit)=>{ const t=SYNC[k];
   if(t==='doc'){ if(!same(a,b)) emit('_doc',k,b); return; }
   if(t==='map'){ a=a||{}; b=b||{}; Object.keys(b).forEach(id=>{ if(!same(a[id],b[id])) emit(k,id,b[id]); }); Object.keys(a).forEach(id=>{ if(!(id in b)) emit(k,id,null,true); }); return; }
@@ -2881,14 +2899,14 @@ const freshWorkspace=(name,email,company)=>{ const pid='p'+Date.now().toString(3
 
 class Component extends DCLogic {
   state = { view:(this.props.startView==='people'?null:this.props.startView) ?? 'dashboard', clientId:'', tab:'overview', menuOpen:false, w:window.innerWidth,
-    viewAs:'', feat:FEAT0, cYM:TODAY.slice(0,7), tq:'', tWho:'all', tStatus:'all', tPri:'all', tBrand:'all', tSortAsc:false, tMode:'table', tDept:'all', tYM:TODAY.slice(0,7), sheetCols:[], sheetW:{}, tdepts:TDEPTS0, ledger:L0, tasks:TASK0, grants:GRANTS0, audit:AUDIT0, people:PEOPLE0, clients:CLIENTS0, brands:BRANDS0, depts:DEPTS0, expCats:EXPCATS0, incCats:INCCATS0, leaves:LEAVE0,
+    viewAs:'', feat:FEAT0, cYM:TODAY.slice(0,7), tq:'', tWho:'all', tStatus:'all', tPri:'all', tBrand:'all', tSortAsc:false, tMode:'table', tDept:'all', tYM:TODAY.slice(0,7), notifs:[], notifOpen:false, myEmail:'', sheetCols:[], sheetW:{}, tdepts:TDEPTS0, ledger:L0, tasks:TASK0, grants:GRANTS0, audit:AUDIT0, people:PEOPLE0, clients:CLIENTS0, brands:BRANDS0, depts:DEPTS0, expCats:EXPCATS0, incCats:INCCATS0, leaves:LEAVE0,
     q:'', searchOpen:false, addOpen:false, brandFilter:'all', sort:'margin', assignee:'all', auditFilter:'all', deptFilter:'all',
     calYM:TODAY.slice(0,7), selDay:TODAY, teamTab:'members', payYM:TODAY.slice(0,7), noteText:'', calWho:'all', calBrand:'all', calStatus:'all',
     lgYM:TODAY.slice(0,7), kpiYM:TODAY.slice(0,7), kpiAll:true, lgType:'all', lgBrand:'all',
     auth:'loading', af:{name:'',company:'',email:'',password:'',confirm:'',agree:false,remember:true}, notice:'', ws:null, wsName:'', wsList:[], me:'', owners:[], partners:[], relTypes:[], sync:'idle', aerr:{}, showPw:false, aBusy:false,
     im:{...IM0}, series:SERIES0, showRec:false, drawer:null, draft:{}, saving:false, modal:null, form:{}, errors:{}, quick:null, toast:null, dragId:null };
   componentDidMount(){ this.cloudInit(); this._r=()=>this.setState({w:window.innerWidth}); window.addEventListener('resize',this._r);
-    this._k=e=>{ if(e.key==='Escape') this.setState(s=>s.quick?{quick:null}:{drawer:null,modal:null,searchOpen:false,menuOpen:false,addOpen:false}); }; window.addEventListener('keydown',this._k); }
+    this._k=e=>{ if(e.key==='Escape') this.setState(s=>s.quick?{quick:null}:{drawer:null,modal:null,searchOpen:false,menuOpen:false,addOpen:false,notifOpen:false}); }; window.addEventListener('keydown',this._k); }
   componentWillUnmount(){ window.removeEventListener('resize',this._r); window.removeEventListener('keydown',this._k); clearTimeout(this._t);
     clearTimeout(this._ft); if(this._unsub) this._unsub(); window.removeEventListener('beforeunload',this._bu); document.removeEventListener('visibilitychange',this._vis); }
   componentDidUpdate(){ this.queueSync(); }
@@ -2901,7 +2919,7 @@ class Component extends DCLogic {
     document.addEventListener('visibilitychange',this._vis);
     Cl.onAuth(ev=>{ if(ev==='PASSWORD_RECOVERY') this.setState({auth:'reset',aerr:{},aBusy:false,notice:''}); });
     Cl.user().then(u=>{ if(Cl.isRecovery()) return this.setState({auth:'reset'}); if(u) this.wsOpen(u); else this.setState({auth:'login'}); }).catch(()=>this.setState({auth:'login'})); }
-  async wsOpen(u){ const Cl=window.Cloud; this._uid=u.id; this.setState({auth:'loading',aBusy:false});
+  async wsOpen(u){ const Cl=window.Cloud; this._uid=u.id; this.setState({auth:'loading',aBusy:false,myEmail:(u.email||'').toLowerCase()});
     try{ let list=await Cl.myWorkspaces();
       if(!list.length){ const meta=u.user_metadata||{}, email=(u.email||'').toLowerCase(), name=String(meta.name||email.split('@')[0]).trim(), company=String(meta.company||'').trim()||name.split(' ')[0]+"'s company";
         const fresh=freshWorkspace(name,email,company), made=await Cl.createWorkspace(company,fresh.pid);
@@ -2942,7 +2960,8 @@ class Component extends DCLogic {
     else if(t==='map'){ v={...(s[k]||{})}; if(r.deleted) delete v[r.id]; else v[r.id]=r.data; }
     else { const arr=s[k]||[], i=arr.findIndex(x=>String(x.id)===r.id);
       v=r.deleted?(i<0?arr:arr.filter((_,j)=>j!==i)):i>=0?arr.map((x,j)=>j===i?r.data:x):PREPEND.has(k)?[r.data,...arr]:[...arr,r.data]; }
-    this._synced[k]=v; this.setState({[k]:v});
+    const fresh=k==='notifs'&&!r.deleted&&r.data&&r.data.to===s.me&&!r.data.read&&!(s.notifs||[]).some(x=>String(x.id)===r.id);
+    this._synced[k]=v; this.setState({[k]:v}); if(fresh) this.alertNotif(r.data);
     if((k==='people'||k==='owners')&&(s.owners||[]).includes(s.me)){ this._memDirty=true; clearTimeout(this._ft); this._ft=setTimeout(()=>this.flush(),1500); } }
   async resync(){ const ws=this.state.ws; if(!ws) return;
     try{ this.queueSync(); if(this._pending.size) await this.flush();
@@ -3022,6 +3041,7 @@ class Component extends DCLogic {
     if(type==='editClient') form={...data,company:data.company||'',services:data.services||'',contact:data.contact||'',retainer:String(data.retainer),sinceDate:data.sinceDate||'',payDay:data.payDay||''};
     if(type==='removeClient') form={...data};
     if(type==='removeMember') form={...data};
+    if(type==='profile'){ const p=P(s.me); form={name:p.name==='Unknown'?'':p.name,role:p.role||'',phone:(p.hr&&p.hr.phone)||'',wsName:s.wsName||'',pw:'',pw2:''}; }
     if(type==='member') form={name:'',role:'',dept:DEPTS0[1],brand:BRANDS[0].id,type:'Full-time',start:TODAY,salary:'',email:'',loginPw:''};
     if(type==='person') form={name:'',rel:'Client contact',client:data.client||'',detail:'',pid:data.pid||''};
     if(type==='leave') form={who:(OWN(s.viewAs)&&data.who)||s.viewAs,type:'Annual',from:'',to:'',note:''};
@@ -3039,6 +3059,7 @@ class Component extends DCLogic {
   setCell(id,k,v){ const s=this.state, t=s.tasks.find(x=>x.id===id); if(!t) return; const ts=nowTs();
     this.setState(z=>({tasks:z.tasks.map(x=>{ if(x.id!==id) return x; if(k.startsWith('c:')) return {...x,custom:{...(x.custom||{}),[k.slice(2)]:v}};
       const n={...x,[k]:k==='est'?(v===''?null:+v):v}; if(k==='status'&&v!==x.status) n.hist=[...(x.hist||[]),{status:v,at:ts,by:z.viewAs}]; return n; })}));
+    if(k==='who'&&t.who!==v) this.notify(v,P(s.me).name+' assigned you “'+(t.title||'Untitled task')+'”.',t.id);
     if(['status','who','due','pri','dept'].includes(k)&&t[k]!==v) this.log({kind:'task',text:'edited '+k+' on “'+t.title+'”',target:this.tgtOf(t),from:String(t[k]??''),to:String(v)}); }
   sheetVals(tl){ const s=this.state, team=PEOPLE.filter(p=>p.team), cc=s.sheetCols;
     const avail=(s.sheetAvail||(s.w-(s.w<860?40:352)))-2; let used=40+90+100+120+36+cc.length*100; const sh={dept:true}; let tMin=180;
@@ -3062,6 +3083,17 @@ class Component extends DCLogic {
   removeDept(d){ const n=this.state.people.filter(p=>p.team&&p.hr&&p.hr.dept===d).length;
     if(n) return this.toast(n+(n===1?' member is':' members are')+' in '+d+'. Move them to another department first.');
     this.setState(s=>({depts:s.depts.filter(x=>x!==d),deptFilter:s.deptFilter===d?'all':s.deptFilter})); this.log({kind:'team',text:'removed the department “'+d+'”',target:'Team',from:d,to:''}); this.toast(d+' removed.'); }
+  // ---------- Notifications ----------
+  notify(to,text,taskId){ const s=this.state; if(!to||to===s.me||!s.ws||!s.people.some(p=>p.id===to&&p.team)) return;
+    const n={id:this.newId('nt'),to,text,task:taskId||null,by:s.me,at:nowTs(),read:false};
+    this.setState(z=>({notifs:[n,...(z.notifs||[])].slice(0,300)})); }
+  alertNotif(n){ this.toast(n.text);
+    try{ if(document.visibilityState!=='visible'&&'Notification' in window&&Notification.permission==='granted'){
+      const x=new Notification(this.state.wsName||'Operations',{body:n.text,tag:n.id}); x.onclick=()=>{ window.focus(); this.openNotif(n); x.close(); }; } }catch(e){} }
+  openNotif(n){ this.setState(z=>({notifOpen:false,notifs:(z.notifs||[]).map(x=>x.id===n.id&&!x.read?{...x,read:true}:x)}));
+    if(n.task&&this.state.tasks.some(t=>t.id===n.task)) this.openTask(n.task); }
+  readAllNotifs(){ const me=this.state.me; this.setState(z=>({notifs:(z.notifs||[]).map(x=>x.to===me&&!x.read?{...x,read:true}:x)})); }
+  async askNotifPermission(){ try{ await Notification.requestPermission(); }catch(e){} this.forceUpdate(); }
   async setLogin(email,pw,pid,name){ const s=this.state, Cl=window.Cloud; if(!s.ws||!Cl||!Cl.enabled) return;
     if(!OWN(s.me)) return this.toast('Only a workspace owner can set logins.');
     try{ this.queueSync(); await this.flush(); const r=await Cl.setMemberLogin(s.ws,email,pw,pid,name); this._members=null;
@@ -3125,13 +3157,13 @@ class Component extends DCLogic {
       if(f.repeat&&f.repeat!=='none'){ const ev=Math.round(+f.every); if(f.repeat==='every'&&(!ev||ev<1)) err.every='Enter a number of days, 1 or more.'; const st=f.due||TODAY; if(f.until&&f.until<st) err.until='Ends before it starts.';
         if(Object.keys(err).length) return this.setState({errors:err});
         const x={id:this.newId('s'),title:f.title.trim(),brand:f.brand,...splitFor(f.client),who:f.who,pri:f.pri||'medium',est:+f.est||null,by:f.by||s.viewAs,active:true,rule:{freq:f.repeat,day:+f.rday,every:ev||1,time:f.time||'',start:st,until:f.until||''}};
-        this.setState(z=>({series:[...z.series,x]})); setTimeout(()=>this.rollSeries(),0);
+        this.setState(z=>({series:[...z.series,x]})); setTimeout(()=>this.rollSeries(),0); this.notify(x.who,P(s.me).name+' assigned you the recurring task “'+x.title+'”.',null);
         const nx=nextOcc(x.rule,st<TODAY?TODAY:st);
         this.log({kind:'task',text:'set up the recurring task “'+x.title+'”',target:this.tgtOf(x),from:'',to:ruleText(x.rule)}); return done('Recurring task set up. '+(nx?'Next one: '+dLabel(nx)+(x.rule.time?' at '+x.rule.time:'')+'.':'')); }
       const ts=nowTs(), nt=(f.note||'').trim(), lm=nt.match(/https?:\/\/\S+/);
       const t={id:this.newId('t'),title:f.title.trim(),brand:f.brand,...splitFor(f.client),who:f.who,status:f.status||'todo',dept:f.dept||'mkt',hours:0,due:f.due||'',pri:f.pri||'medium',est:+f.est||null,by:f.by||s.viewAs,created:TODAY,verified:false,
         hist:[{status:f.status||'todo',at:ts,by:f.by||s.viewAs}],notes:nt?[{id:this.newId('n'),by:s.viewAs,at:ts,text:nt,link:lm?lm[0]:''}]:[]};
-      this.setState(x=>({tasks:[...x.tasks,t]})); this.log({kind:'task',text:'created “'+t.title+'”',target:this.tgtOf(t),from:'',to:STATUS.find(z=>z.id===t.status).label}); done('Task created.');
+      this.setState(x=>({tasks:[...x.tasks,t]})); this.log({kind:'task',text:'created “'+t.title+'”',target:this.tgtOf(t),from:'',to:STATUS.find(z=>z.id===t.status).label}); this.notify(t.who,P(s.me).name+' assigned you “'+t.title+'”'+(t.due?', due '+dLabel(t.due):'')+'.',t.id); done('Task created.');
     } else if(s.modal==='client'){
       if(!f.name.trim()) err.name='Enter the client name.'; else if(CLIENTS.some(c=>c.name.toLowerCase()===f.name.trim().toLowerCase())) err.name='A client with this name already exists.';
       if(Object.keys(err).length) return this.setState({errors:err});
@@ -3166,6 +3198,18 @@ class Component extends DCLogic {
       this.log({kind:'client',text:'edited the profile of '+f.name.trim(),target:f.name.trim(),from:old.retainer!==nr?inr(old.retainer):'',to:old.retainer!==nr?inr(nr):'Profile updated'}); done('Client profile saved.');
     } else if(s.modal==='removeClient'){
       this.setState(x=>({clients:x.clients.filter(c=>c.id!==f.id),drawer:null})); this.log({kind:'client',text:'removed client “'+f.name+'”',target:f.name,from:'Active',to:'Removed'}); done(f.name+' removed.');
+    } else if(s.modal==='profile'){
+      if(!f.name.trim()) err.name='Enter your name.';
+      if(f.pw&&f.pw.length<8) err.pw='Use at least 8 characters.'; if(f.pw&&f.pw2!==f.pw) err.pw2='Passwords do not match.';
+      if(OWN(s.me)&&!f.wsName.trim()) err.wsName='Enter a workspace name.';
+      if(Object.keys(err).length) return this.setState({errors:err});
+      const nm=f.name.trim(), Cl=window.Cloud, jobs=[];
+      this.setState(x=>({people:x.people.map(p=>p.id!==s.me?p:{...p,name:nm,role:f.role.trim()||p.role,hr:p.hr?{...p.hr,phone:f.phone.trim()}:p.hr}),
+        partners:(x.partners||[]).map(pp=>pp.id===s.me?{...pp,name:nm}:pp),modal:null}));
+      if(OWN(s.me)&&f.wsName.trim()!==s.wsName){ const wn=f.wsName.trim(); jobs.push(Cl.renameWorkspace(s.ws,wn).then(()=>this.setState(z=>({wsName:wn,wsList:(z.wsList||[]).map(w=>w.workspace_id===z.ws?{...w,name:wn}:w)})))); }
+      if(f.pw) jobs.push(Cl.updatePassword(f.pw));
+      Promise.all(jobs).then(()=>this.toast(f.pw?'Profile and password saved.':'Profile saved.'),e=>this.toast('Profile saved, but: '+Cl.errText(e)));
+      return;
     } else if(s.modal==='removeMember'){
       if(OWN(f.id)||f.id===s.me){ this.setState({modal:null}); return this.toast('Owners and your own profile cannot be removed.'); }
       this.setState(x=>({people:x.people.map(p=>p.id===f.id?{...p,team:false,removed:TODAY,hr:p.hr?{...p.hr,status:'Left'}:p.hr}:p),drawer:null}));
@@ -3304,7 +3348,7 @@ class Component extends DCLogic {
   saveTask(){ const s=this.state,d=s.drawer,t=s.tasks.find(x=>x.id===d.id),dr=s.draft; this.setState({saving:true});
     setTimeout(()=>{ const h=Math.max(0,Number(dr.hours)||0); const ch=[], tg=this.tgtOf(t), sp=splitFor(dr.client), cl=sp.client, ts=nowTs();
       if(dr.status!==t.status) ch.push({kind:'task',text:'moved “'+t.title+'”',target:tg,from:STATUS.find(x=>x.id===t.status).label,to:STATUS.find(x=>x.id===dr.status).label});
-      if(dr.who!==t.who) ch.push({kind:'task',text:'reassigned “'+t.title+'”',target:tg,from:P(t.who).name,to:P(dr.who).name});
+      if(dr.who!==t.who){ ch.push({kind:'task',text:'reassigned “'+t.title+'”',target:tg,from:P(t.who).name,to:P(dr.who).name}); this.notify(dr.who,P(s.me).name+' assigned you “'+t.title+'”.',t.id); }
       if(dr.brand!==t.brand||cl!==(t.client||null)) ch.push({kind:'task',text:'changed who “'+t.title+'” is for',target:tg,from:this.tagOf(t),to:this.tagOf({brand:dr.brand,client:cl})});
       if(dr.due!==t.due) ch.push({kind:'task',text:'changed the due date on “'+t.title+'”',target:tg,from:dLabel(t.due),to:dLabel(dr.due)});
       if(dr.pri!==(t.pri||'medium')) ch.push({kind:'task',text:'changed the priority of “'+t.title+'”',target:tg,from:PRI[t.pri||'medium'][0],to:PRI[dr.pri][0]});
@@ -3650,6 +3694,9 @@ class Component extends DCLogic {
     if(s.modal==='confirmDelete') md={title:'Delete entry',submit:'Delete',hasText:true,text:'Delete “'+f.desc+'” for '+inr(f.amount||0)+'? It will leave the ledger, and the deletion is recorded in the audit trail.',fields:[]};
     if(s.modal==='editClient') md={title:'Edit client profile',submit:'Save changes',fields:[fld('name','Client name'),fld('company','Company'),fld('brand','Brand',{options:brandOpts,add:'brand',addKind:'brand'}),
       fld('retainer','Monthly retainer (₹)'),fld('sinceDate','Onboard date',{type:'date'}),fld('payDay','Paid date',{options:PAYDAYS}),fld('services','Services provided',{full:true}),fld('contact','Main contact',{full:true})],hasNote:true,note:'Changes are recorded in the audit trail.'};
+    if(s.modal==='profile') md={title:'Your profile',submit:'Save',fields:[fld('name','Full name'),fld('role','Role'),fld('phone','Phone',{ph:'Optional'}),
+      ...(OWN(s.me)?[fld('wsName','Workspace name')]:[]),fld('pw','New password',{type:'password',ph:'Leave blank to keep it'}),fld('pw2','Confirm new password',{type:'password'})],
+      hasNote:true,note:'You log in with '+(s.myEmail||'your email')+'.'+(OWN(s.me)?' The workspace name shows to everyone in this workspace.':'')};
     if(s.modal==='removeMember') md={title:'Remove team member',submit:'Remove from team',hasText:true,text:'Remove '+f.name+' from the team? They lose access to this workspace right away. Their past tasks, salary records and history stay. The removal is recorded in the audit trail.',fields:[]};
     if(s.modal==='removeClient') md={title:'Remove client',submit:'Remove client',hasText:true,text:'Remove '+f.name+'? The client leaves every list and report. The removal is recorded in the audit trail.',fields:[]};
     md.submitBg=(s.modal==='confirmDelete'||s.modal==='removeClient'||s.modal==='removeMember'||s.modal==='deleteDraw')?'#DC2626':'#5B5BD6'; md.hasNote=!!md.hasNote; md.hasToggle=!!md.hasToggle; md.hasText=!!md.hasText;
@@ -3707,7 +3754,11 @@ class Component extends DCLogic {
       switchText:isLogin?'New to the workspace?':'Already have an account?',switchLabel:isLogin?'Create an account':'Log in',switchGo:e=>{e.preventDefault(); this.authMode(isLogin?'signup':'login');}};
 
     return {
-      authOn:!!s.auth,au,im:imv,logout:()=>this.logout(),wsName:s.wsName||'Workspace',wsMulti:(s.wsList||[]).length>1,wsId:s.ws||'',wsOptions:(s.wsList||[]).map(w=>({id:w.workspace_id,label:w.name})),onWs:e=>this.switchWs(e.target.value),
+      authOn:!!s.auth,au,im:imv,logout:()=>this.logout(),openProfile:()=>this.openModal('profile'),wsName:s.wsName||'Workspace',
+      nb:(()=>{ const mine=(s.notifs||[]).filter(n=>n.to===s.me), un=mine.filter(n=>!n.read).length, perm=('Notification' in window)?Notification.permission:'unsupported';
+        return {has:un>0,badge:un>9?'9+':String(un),open:!!s.notifOpen,toggle:()=>this.setState(z=>({notifOpen:!z.notifOpen,addOpen:false})),close:()=>this.setState({notifOpen:false}),
+          empty:!mine.length,hasUnread:un>0,readAll:()=>this.readAllNotifs(),canAsk:perm==='default',ask:()=>this.askNotifPermission(),denied:perm==='denied',
+          items:mine.slice(0,30).map(n=>({text:n.text,at:fmtTsS(n.at),bg:n.read?'#fff':'rgba(91,91,214,.06)',dot:n.read?'transparent':'#5B5BD6',go:()=>this.openNotif(n)}))}; })(),wsMulti:(s.wsList||[]).length>1,wsId:s.ws||'',wsOptions:(s.wsList||[]).map(w=>({id:w.workspace_id,label:w.name})),onWs:e=>this.switchWs(e.target.value),
       syncText:{saving:'Saving…',saved:'All changes saved',error:'Not saved yet, retrying…',offline:'Reconnecting…'}[s.sync]||'',syncColor:s.sync==='error'||s.sync==='offline'?'#D97706':s.sync==='saved'?'#16A34A':'#94A3B8',
       onAuth:e=>{const {name,type,checked,value}=e.target; this.setState(z=>({af:{...z.af,[name]:type==='checkbox'?checked:value},aerr:{...z.aerr,[name]:''}}));},
       font,fw,L,sb,nav,isNarrow:narrow,isWide:!narrow,scrim:narrow&&s.menuOpen,openMenu:()=>this.setState({menuOpen:true}),closeMenu:()=>this.setState({menuOpen:false}),
