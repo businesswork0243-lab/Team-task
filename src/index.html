@@ -2131,7 +2131,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid r
           <sc-raw-select value="{{ tk.brand }}" sc-camel-on-change="{{ tk.onBrand }}" style="height:38px;padding:0 10px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;font-size:12px;min-width:0"><option value="all">All brands</option><sc-for list="{{ brandList }}" as="o"><option value="{{ o.id }}">{{ o.name }}</option></sc-for></sc-raw-select>
           <sc-raw-select value="{{ tk.dept }}" sc-camel-on-change="{{ tk.onDept }}" style="height:38px;padding:0 10px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;font-size:12px;min-width:0"><option value="all">All departments</option><sc-for list="{{ tDeptList }}" as="o"><option value="{{ o.id }}">{{ o.name }}</option></sc-for><option value="__add">+ Add department</option></sc-raw-select>
           <div style="display:flex;gap:2px;padding:3px;border-radius:8px;background:#F1F5F9;height:38px;box-sizing:border-box"><button sc-camel-on-click="{{ tk.toList }}" style="border:0;border-radius:6px;padding:0 12px;background:{{ tk.listBg }};color:{{ tk.listFg }};font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer">List</button><button sc-camel-on-click="{{ tk.toBoard }}" style="border:0;border-radius:6px;padding:0 12px;background:{{ tk.boardBg }};color:{{ tk.boardFg }};font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer;white-space:nowrap">Department board</button><button sc-camel-on-click="{{ tk.toSheet }}" style="border:0;border-radius:6px;padding:0 12px;background:{{ tk.sheetBg }};color:{{ tk.sheetFg }};font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer">Sheet</button></div>
-          <button sc-camel-on-click="{{ tk.toggleRec }}" style="height:38px;padding:0 14px;border:1px solid {{ tk.recBorder }};border-radius:8px;background:{{ tk.recBg }};color:#0F172A;font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer;white-space:nowrap">↻ Recurring {{ tk.recCount }}</button>
+          <sc-if value="{{ tk.showRecBtn }}"><button sc-camel-on-click="{{ tk.toggleRec }}" style="height:38px;padding:0 14px;border:1px solid {{ tk.recBorder }};border-radius:8px;background:{{ tk.recBg }};color:#0F172A;font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer;white-space:nowrap">↻ Recurring {{ tk.recCount }}</button></sc-if>
           <button sc-camel-on-click="{{ tk.add }}" style="height:38px;padding:0 16px;border:0;border-radius:8px;background:#5B5BD6;color:#fff;font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer" style-hover="background:#4C4CC4">+ Add task</button>
         </div>
         <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px">
@@ -2508,13 +2508,15 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid r
               <input name="est" type="number" min="0" value="{{ draft.est }}" sc-camel-on-change="{{ onDraft }}" disabled="{{ dr.readOnly }}" placeholder="None" style="height:42px;padding:0 12px;border:1px solid #E2E8F0;border-radius:8px;font-size:14px;font-weight:var(--fw-body,400);min-width:0">
             </label>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="display:grid;grid-template-columns:{{ dr.isTech ? '1fr' : '1fr 1fr' }};gap:12px">
             <label style="display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:var(--fw-strong,600)">Brand
               <sc-raw-select name="brand" value="{{ draft.brand }}" sc-camel-on-change="{{ onDraft }}" disabled="{{ dr.readOnly }}" style="height:42px;padding:0 12px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;font-size:14px;font-weight:var(--fw-body,400);min-width:0"><sc-for list="{{ brandList }}" as="o"><option value="{{ o.id }}">{{ o.name }}</option></sc-for></sc-raw-select>
             </label>
-            <label style="display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:var(--fw-strong,600)">Working for
-              <sc-raw-select name="client" value="{{ draft.client }}" sc-camel-on-change="{{ onDraft }}" disabled="{{ dr.readOnly }}" style="height:42px;padding:0 12px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;font-size:14px;font-weight:var(--fw-body,400);min-width:0"><sc-for list="{{ dr.forOpts }}" as="o"><option value="{{ o.id }}">{{ o.name }}</option></sc-for></sc-raw-select>
-            </label>
+            <sc-if value="{{ !dr.isTech }}">
+              <label style="display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:var(--fw-strong,600)">Working for
+                <sc-raw-select name="client" value="{{ draft.client }}" sc-camel-on-change="{{ onDraft }}" disabled="{{ dr.readOnly }}" style="height:42px;padding:0 12px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;font-size:14px;font-weight:var(--fw-body,400);min-width:0"><sc-for list="{{ dr.forOpts }}" as="o"><option value="{{ o.id }}">{{ o.name }}</option></sc-for></sc-raw-select>
+              </label>
+            </sc-if>
           </div>
           <label style="display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:var(--fw-strong,600)">Assignee
             <sc-raw-select name="who" value="{{ draft.who }}" sc-camel-on-change="{{ onDraft }}" disabled="{{ dr.readOnly }}" style="height:42px;padding:0 12px;border:1px solid rgba(100,116,139,.3);border-radius:8px;background:#fff;font-size:14px;font-weight:var(--fw-body,400)">
@@ -2839,6 +2841,10 @@ const L0 = [];
 
 const TASK0 = [];
 const TDEPTS0=[{id:'tech',name:'Tech',dot:'#2563EB'},{id:'mkt',name:'Marketing',dot:'#5B5BD6'},{id:'ops',name:'Ops & BD',dot:'#D97706'}];
+const isTechPerson=p=>{ if(!p) return false; const hd=(p.hr&&p.hr.dept||'').toLowerCase(), rl=(p.role||'').toLowerCase();
+  if(hd==='tech'||hd==='engineering'||/tech|developer|engineer|full stack|frontend|backend/i.test(rl)||/tech|engineering/i.test(hd)) return true;
+  const td=p.taskDepts||[]; return td.some(id=>{ const d=(TDEPTS||[]).find(x=>x.id===id); return id==='tech'||(d&&(d.name||'').toLowerCase()==='tech'); }); };
+const isTechDept=deptId=>{ if(!deptId) return false; if(deptId==='tech') return true; const d=(TDEPTS||[]).find(x=>x.id===deptId); return d&&(d.name||'').toLowerCase()==='tech'; };
 const deptOf=t=>{ const x=(t.title||'').toLowerCase(); if(/\bdomain\b|hosting|\bwebsite\b|site migration|dashboard|deploy|\bapi\b|automation|\bbug\b/.test(x)) return 'tech';
   if(t.cat==='Admin'||/\bmeet|\bcall with|reach out|email|ask update|remind|webinar|roundtable|speaker|delegate|launch date|\bmail \w+ to ask/.test(x)) return 'ops'; return 'mkt'; };
 TASK0.forEach(t=>{ if(!t.dept) t.dept=deptOf(t); });
@@ -2849,7 +2855,7 @@ const occurs=(r,d)=>{ if(d<r.start||(r.until&&d>r.until)) return false; const wd
 const ruleShort=r=>r.freq==='daily'?'Daily':r.freq==='weekdays'?'Weekdays':r.freq==='weekly'?'Weekly':'Every '+r.every+'d';
 const ruleText=r=>(r.freq==='daily'?'Every day':r.freq==='weekdays'?'Every weekday, Monday to Friday':r.freq==='weekly'?'Every '+DOWL[+r.day]:'Every '+r.every+' days')+(r.time?' at '+r.time:'')+(r.until?', until '+dLabel(r.until):'');
 const nextOcc=(r,from)=>{ let d=from; for(let i=0;i<400;i++){ if(r.until&&d>r.until) return null; if(occurs(r,d)) return d; d=addD(d,1); } return null; };
-const mkInst=(x,d)=>({id:'rs'+x.id+'_'+d,title:x.title,brand:x.brand,client:x.client,who:x.who,status:'todo',dept:x.dept||'mkt',hours:0,due:d,dueTime:x.rule.time||'',pri:x.pri,est:x.est,by:x.by,created:d,verified:false,series:x.id,hist:[{status:'todo',at:d+'T'+(x.rule.time&&x.rule.time<'08:00'?x.rule.time:'08:00'),by:x.by}],notes:[]});
+const mkInst=(x,d)=>({id:'rs'+x.id+'_'+d,title:x.title,brand:x.brand,client:x.client||null,area:x.area||'',who:x.who,status:'todo',dept:x.dept||'mkt',hours:0,due:d,dueTime:x.rule.time||'',pri:x.pri,est:x.est,by:x.by,created:d,verified:false,series:x.id,hist:[{status:'todo',at:d+'T'+(x.rule.time&&x.rule.time<'08:00'?x.rule.time:'08:00'),by:x.by}],notes:[]});
 const SERIES0=[];
 (()=>{ const miss=addD(TODAY,-1); SERIES0.forEach(x=>{ for(let d=x.rule.start; d<=TODAY; d=addD(d,1)){ if(!occurs(x.rule,d)) continue; const t=mkInst(x,d);
   if(d<TODAY&&!(x.id==='s1'&&d===miss)){ t.status='done'; const tm=x.rule.time||'12:00'; t.hist.push({status:'done',at:d+'T'+p2(Math.min(23,+tm.slice(0,2)+1))+tm.slice(2),by:x.who}); t.verified=d<addD(TODAY,-3); }
@@ -3049,7 +3055,7 @@ class Component extends DCLogic {
     const ctxClient=s.view==='client'?s.clientId:'';
     if(type==='entry') form={type:data.type||'out',desc:'',client:data.client??(ctxClient&&this.can(ctxClient,'finance')?ctxClient:''),cat:(data.type==='in'?'Retainer':'Software'),amount:'',date:data.date||(s.lgYM===TODAY.slice(0,7)?TODAY:s.lgYM+'-01'),status:'paid',cur:(data.type==='in'&&data.client&&C(data.client).cur)||'INR',orig:'',emp:'',partner:''};
     if(type==='editEntry') form={...data,client:data.client||'',amount:String(data.amount),cur:data.cur||'INR',orig:data.orig!=null?String(data.orig):''};
-    if(type==='task'){ const tc=data.client??(ctxClient&&this.can(ctxClient,'edit')?ctxClient:''); form={by:s.viewAs,dept:'mkt',title:'',brand:tc?C(tc).brand:((P(s.viewAs).hr||{}).brand||BRANDS[0].id),client:tc,who:data.who||(s.viewAs),due:data.due||'',status:data.status||'todo',pri:'medium',est:'',note:'',repeat:'none',rday:String(pd(data.due||TODAY).getDay()),every:'2',time:'',until:''}; }
+    if(type==='task'){ const viewer=P(s.viewAs), isVTech=isTechPerson(viewer); const tDeptObj=(s.tdepts||[]).find(d=>d.id==='tech'||(d.name||'').toLowerCase()==='tech'); const defDept=data.dept||(isVTech?(tDeptObj?tDeptObj.id:'tech'):'mkt'); const defWho=data.who||s.viewAs; const isTech=isVTech||isTechPerson(P(defWho))||isTechDept(defDept); const tc=isTech?'':(data.client??(ctxClient&&this.can(ctxClient,'edit')?ctxClient:'')); const defDue=data.due||s.selDay||TODAY; form={by:s.viewAs,dept:defDept,title:'',brand:tc?C(tc).brand:((viewer.hr||{}).brand||BRANDS[0].id),client:tc,who:defWho,due:defDue,status:data.status||'todo',pri:'medium',est:'',note:'',repeat:'none',rday:String(pd(defDue).getDay()),every:'2',time:'',until:''}; }
     if(type==='client') form={name:'',company:'',brand:BRANDS[0].id,retainer:'',services:'',contact:'',sinceDate:TODAY,payDay:''};
     if(type==='editMember'){ const x=data.hr||{}; form={id:data.id,name:data.name,role:data.role||'',dept:x.dept||'',brand:x.brand||BRANDS[0].id,type:x.type||'Full-time',start:x.start||'',salary:x.salary!=null?String(x.salary):'',email:x.email||'',phone:x.phone||'',manager:x.manager||'',loginPw:''}; }
     if(type==='editClient') form={...data,company:data.company||'',services:data.services||'',contact:data.contact||'',retainer:String(data.retainer),sinceDate:data.sinceDate||'',payDay:data.payDay||''};
@@ -3175,18 +3181,21 @@ class Component extends DCLogic {
         done('Changes saved. Previous value kept in history.'); }
     } else if(s.modal==='task'){
       if(!f.title.trim()) err.title='Give the task a title.'; if(!f.brand) err.brand='Pick a brand.';
-      if(f.client&&!this.can(f.client,'edit')) err.client='You need Edit access on this client.';
+      const isTechTask = isTechDept(f.dept) || isTechPerson(P(s.viewAs)) || isTechPerson(P(f.who));
+      const clientVal = isTechTask ? '' : (f.client || '');
+      if(clientVal&&!this.can(clientVal,'edit')) err.client='You need Edit access on this client.';
       if(Object.keys(err).length) return this.setState({errors:err});
-      if(f.repeat&&f.repeat!=='none'){ const ev=Math.round(+f.every); if(f.repeat==='every'&&(!ev||ev<1)) err.every='Enter a number of days, 1 or more.'; const st=f.due||TODAY; if(f.until&&f.until<st) err.until='Ends before it starts.';
+      const taskDue = f.due || s.selDay || TODAY;
+      if(f.repeat&&f.repeat!=='none'){ const ev=Math.round(+f.every); if(f.repeat==='every'&&(!ev||ev<1)) err.every='Enter a number of days, 1 or more.'; const st=taskDue; if(f.until&&f.until<st) err.until='Ends before it starts.';
         if(Object.keys(err).length) return this.setState({errors:err});
-        const x={id:this.newId('s'),title:f.title.trim(),brand:f.brand,...splitFor(f.client),who:f.who,dept:f.dept||'mkt',pri:f.pri||'medium',est:+f.est||null,by:f.by||s.viewAs,active:true,rule:{freq:f.repeat,day:+f.rday,every:ev||1,time:f.time||'',start:st,until:f.until||''}};
-        this.setState(z=>({series:[...z.series,x]})); setTimeout(()=>this.rollSeries(),0); this.notify(x.who,P(s.me).name+' assigned you the recurring task “'+x.title+'”.',null);
+        const x={id:this.newId('s'),title:f.title.trim(),brand:f.brand,...splitFor(clientVal),who:f.who,dept:f.dept||'mkt',pri:f.pri||'medium',est:+f.est||null,by:f.by||s.viewAs,active:true,rule:{freq:f.repeat,day:+f.rday,every:ev||1,time:f.time||'',start:st,until:f.until||''}};
+        this.setState(z=>({series:[...z.series,x],calYM:st.slice(0,7),calWho:'all',calBrand:'all'})); setTimeout(()=>this.rollSeries(),0); this.notify(x.who,P(s.me).name+' assigned you the recurring task “'+x.title+'”.',null);
         const nx=nextOcc(x.rule,st<TODAY?TODAY:st);
         this.log({kind:'task',text:'set up the recurring task “'+x.title+'”',target:this.tgtOf(x),from:'',to:ruleText(x.rule)}); return done('Recurring task set up. '+(nx?'Next one: '+dLabel(nx)+(x.rule.time?' at '+x.rule.time:'')+'.':'')); }
       const ts=nowTs(), nt=(f.note||'').trim(), lm=nt.match(/https?:\/\/\S+/);
-      const t={id:this.newId('t'),title:f.title.trim(),brand:f.brand,...splitFor(f.client),who:f.who,status:f.status||'todo',dept:f.dept||'mkt',hours:0,due:f.due||'',pri:f.pri||'medium',est:+f.est||null,by:f.by||s.viewAs,created:TODAY,verified:false,
+      const t={id:this.newId('t'),title:f.title.trim(),brand:f.brand,...splitFor(clientVal),who:f.who,status:f.status||'todo',dept:f.dept||'mkt',hours:0,due:taskDue,pri:f.pri||'medium',est:+f.est||null,by:f.by||s.viewAs,created:TODAY,verified:false,
         hist:[{status:f.status||'todo',at:ts,by:f.by||s.viewAs}],notes:nt?[{id:this.newId('n'),by:s.viewAs,at:ts,text:nt,link:lm?lm[0]:''}]:[]};
-      this.setState(x=>({tasks:[...x.tasks,t]})); this.log({kind:'task',text:'created “'+t.title+'”',target:this.tgtOf(t),from:'',to:STATUS.find(z=>z.id===t.status).label}); this.notify(t.who,P(s.me).name+' assigned you “'+t.title+'”'+(t.due?', due '+dLabel(t.due):'')+'.',t.id); done('Task created.');
+      this.setState(x=>({tasks:[...x.tasks,t],calYM:taskDue.slice(0,7),calWho:'all',calBrand:'all'})); this.log({kind:'task',text:'created “'+t.title+'”',target:this.tgtOf(t),from:'',to:STATUS.find(z=>z.id===t.status).label}); this.notify(t.who,P(s.me).name+' assigned you “'+t.title+'”'+(t.due?', due '+dLabel(t.due):'')+'.',t.id); done('Task created.');
     } else if(s.modal==='client'){
       if(!f.name.trim()) err.name='Enter the client name.'; else if(CLIENTS.some(c=>c.name.toLowerCase()===f.name.trim().toLowerCase())) err.name='A client with this name already exists.';
       if(Object.keys(err).length) return this.setState({errors:err});
@@ -3244,7 +3253,10 @@ class Component extends DCLogic {
   }
   openQuick(kind,target,field){ this.setState({quick:{kind,target,field,form:{name:'',brand:this.state.form.brand||BRANDS[0].id,role:''},error:''}}); }
   rollSeries(){ this.setState(s=>{ const have=new Set(s.tasks.map(t=>t.id)), add=[];
-      s.series.filter(x=>x.active).forEach(x=>{ for(let d=x.rule.start; d<=TODAY; d=addD(d,1)){ if(occurs(x.rule,d)&&!have.has('rs'+x.id+'_'+d)) add.push(mkInst(x,d)); } });
+      const ym=s.calYM||TODAY.slice(0,7); const [cy,cm]=ym.split('-').map(Number); const lastDay=new Date(cy,cm,0).getDate();
+      const endCal=iso(cy,cm,lastDay), sixtyDays=addD(TODAY,60), rollUntil=endCal>sixtyDays?endCal:sixtyDays;
+      s.series.filter(x=>x.active).forEach(x=>{ const limit=x.rule.until&&x.rule.until<rollUntil?x.rule.until:rollUntil;
+        for(let d=x.rule.start; d<=limit; d=addD(d,1)){ if(occurs(x.rule,d)&&!have.has('rs'+x.id+'_'+d)) add.push(mkInst(x,d)); } });
       return add.length?{tasks:[...s.tasks,...add]}:null; }); }
   toggleSeries(id){ const x=this.state.series.find(z=>z.id===id), on=!x.active;
     this.setState(s=>({series:s.series.map(z=>z.id===id?{...z,active:on,rule:{...z.rule,until:on?'':TODAY}}:z)}));
@@ -3369,7 +3381,7 @@ class Component extends DCLogic {
     this.setState(s=>({grants:{...s.grants,[pid+':'+cid]:l}}));
     this.log({kind:'access',text:'changed access for '+P(pid).name,target:C(cid).name,from:LVL[from],to:LVL[l]}); this.toast(P(pid).name+' now has '+LVL[l]+' on '+C(cid).name+'.'); }
   saveTask(){ const s=this.state,d=s.drawer,t=s.tasks.find(x=>x.id===d.id),dr=s.draft; this.setState({saving:true});
-    setTimeout(()=>{ const h=Math.max(0,Number(dr.hours)||0); const ch=[], tg=this.tgtOf(t), sp=splitFor(dr.client), cl=sp.client, ts=nowTs();
+    setTimeout(()=>{ const h=Math.max(0,Number(dr.hours)||0); const ch=[], tg=this.tgtOf(t), isTaskTech=isTechDept(dr.dept||t.dept)||isTechPerson(P(s.viewAs))||isTechPerson(P(dr.who||t.who)), sp=splitFor(isTaskTech?'':dr.client), cl=isTaskTech?null:sp.client, ts=nowTs();
       if(dr.status!==t.status) ch.push({kind:'task',text:'moved “'+t.title+'”',target:tg,from:STATUS.find(x=>x.id===t.status).label,to:STATUS.find(x=>x.id===dr.status).label});
       if(dr.who!==t.who){ ch.push({kind:'task',text:'reassigned “'+t.title+'”',target:tg,from:P(t.who).name,to:P(dr.who).name}); this.notify(dr.who,P(s.me).name+' assigned you “'+t.title+'”.',t.id); }
       if(dr.brand!==t.brand||cl!==(t.client||null)) ch.push({kind:'task',text:'changed who “'+t.title+'” is for',target:tg,from:this.tagOf(t),to:this.tagOf({brand:dr.brand,client:cl})});
@@ -3394,7 +3406,7 @@ class Component extends DCLogic {
     const vis=CLIENTS.filter(c=>this.can(c.id,'view')), fin=vis.filter(c=>this.can(c.id,'finance'));
     const visIds=new Set(vis.map(c=>c.id)), finIds=new Set(fin.map(c=>c.id));
     const me=P(s.viewAs), myTD=!OWN(s.viewAs)&&me.taskDepts&&me.taskDepts.length?new Set(me.taskDepts):null;
-    const vTasks=s.tasks.filter(t=>(t.client?visIds.has(t.client):true)&&(!myTD||myTD.has(t.dept||'mkt')||t.who===s.viewAs)), vLedger=s.ledger.filter(e=>this.canLedger(e));
+    const vTasks=s.tasks.filter(t=>(t.client?visIds.has(t.client):true)&&(!myTD||myTD.has(t.dept||'mkt')||t.who===s.viewAs||t.by===s.viewAs)), vLedger=s.ledger.filter(e=>this.canLedger(e));
     const team=PEOPLE.filter(p=>p.team);
     const L={pad:narrow?'16px':'32px',rowPad:compact?'9px':'13px',clientCols:narrow?'1fr 1fr':'minmax(0,2fr) repeat(4,minmax(0,1fr))',nameSpan:narrow?'1 / -1':'auto',numAlign:narrow?'left':'right',
       hrCols:narrow?'1fr 1fr':'minmax(0,2.2fr) repeat(5,minmax(0,1fr))',calH:narrow?'70px':'118px',
@@ -3454,7 +3466,7 @@ class Component extends DCLogic {
       ...dayLv.map(l=>({title:P(l.who).name+' on leave',meta:l.type+' leave',bg:'#fff',edge:'#2563EB',hasStatus:false,go:()=>this.openPerson(l.who)})),
       ...dayTs.map(t=>{const st=this.stOf(t), sc=SCHIP[st]; return {title:t.title,meta:this.tagOf(t)+' · '+P(t.who).name,bg:DOT[st].bg,edge:DOT[st].edge,hasStatus:true,status:DOT[st].label,sBg:sc[0],sFg:sc[1],go:()=>this.openTask(t.id,{type:'day',day:s.selDay})};})];
     const sd=selIn?pd(s.selDay):null;
-    const cal={label:ymLabel(s.calYM),prev:()=>this.setState({calYM:ymAdd(s.calYM,-1)}),next:()=>this.setState({calYM:ymAdd(s.calYM,1)}),today:()=>this.setState({calYM:TODAY.slice(0,7),selDay:TODAY}),
+    const cal={label:ymLabel(s.calYM),prev:()=>{this.setState({calYM:ymAdd(s.calYM,-1)});setTimeout(()=>this.rollSeries(),0);},next:()=>{this.setState({calYM:ymAdd(s.calYM,1)});setTimeout(()=>this.rollSeries(),0);},today:()=>{this.setState({calYM:TODAY.slice(0,7),selDay:TODAY});setTimeout(()=>this.rollSeries(),0);},
       who:s.calWho,brand:s.calBrand,dept:s.calDept,onWho:e=>this.setState({calWho:e.target.value}),onBrand:e=>this.setState({calBrand:e.target.value}),onDept:e=>this.setState({calDept:e.target.value}),
       stats:statDef.map(([id,label,value,color])=>{const a=s.calStatus===id; return {label,value:String(value),color,bg:a?'rgba(91,91,214,.1)':'rgba(100,116,139,.05)',border:a?'#5B5BD6':'transparent',go:()=>this.setState({calStatus:id})};}),
       dows:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>narrow?d[0]:d.toUpperCase()),cells,legend:['todo','doing','review','blocked','done','late'].map(k=>DOT[k]),
@@ -3582,22 +3594,24 @@ class Component extends DCLogic {
     const tl=vTasks.filter(t=>(allM||tMon(t)===s.tYM)&&(s.tWho==='all'||t.who===s.tWho)&&(s.tStatus==='all'||(s.tStatus==='late'?this.stOf(t)==='late':t.status===s.tStatus))&&(s.tPri==='all'||t.pri===s.tPri)&&(s.tBrand==='all'||t.brand===s.tBrand)&&(s.tDept==='all'||(t.dept||'mkt')===s.tDept)&&(!tql||t.title.toLowerCase().includes(tql)||this.tagOf(t).toLowerCase().includes(tql)))
       .sort((a,b)=>{const r=(a.created||'').localeCompare(b.created||'')||(a.due||'').localeCompare(b.due||''); return s.tSortAsc?r:-r;});
     const lateN=tl.filter(t=>this.lateDays(t)>0).length;
-    const tk={q:s.tq,onQ:e=>this.setState({tq:e.target.value}),
-      monthLabel:allM?'All months':ymLabel(s.tYM),prevMonth:()=>this.setState({tYM:ymAdd(curYM,-1)}),nextMonth:()=>this.setState({tYM:ymAdd(curYM,1)}),
-      thisMonth:()=>this.setState({tYM:TODAY.slice(0,7)}),allMonths:()=>this.setState({tYM:'all'}),allMonthsLink:e=>{e.preventDefault(); this.setState({tYM:'all'});},allMBg:allM?'#111827':'#fff',allMFg:allM?'#fff':'#0F172A',
-      hasMonthNote:lateElse>0,monthNote:lateElse+(lateElse===1?' late task from another month is hidden.':' late tasks from other months are hidden.'),who:s.tWho,onWho:e=>this.setState({tWho:e.target.value}),status:s.tStatus,onStatus:e=>this.setState({tStatus:e.target.value}),
-      pri:s.tPri,onPri:e=>this.setState({tPri:e.target.value}),brand:s.tBrand,onBrand:e=>this.setState({tBrand:e.target.value}),
-      dept:s.tDept,onDept:e=>{ const v=e.target.value; if(v===ADD) return this.openQuick('tdept','none','dept'); this.setState({tDept:v}); },isTable:s.tMode==='table',isBoard:s.tMode==='board',isSheet:s.tMode==='sheet',toSheet:()=>this.setState({tMode:'sheet'}),sheetBg:s.tMode==='sheet'?'#fff':'transparent',sheetFg:s.tMode==='sheet'?'#0F172A':'#64748B',sheet:this.sheetVals(tl),
-      toList:()=>this.setState({tMode:'table'}),toBoard:()=>this.setState({tMode:'board'}),addDept:()=>this.openQuick('tdept','none','dept'),listBg:s.tMode==='table'?'#fff':'transparent',listFg:s.tMode==='table'?'#0F172A':'#64748B',boardBg:s.tMode==='board'?'#fff':'transparent',boardFg:s.tMode==='board'?'#0F172A':'#64748B',
-      boardNote:s.tStatus==='all'?'Completed tasks are hidden on the board. Pick Completed in the status filter to see them.':'',
-      cols:TDEPTS.filter(d=>(s.tDept==='all'||d.id===s.tDept)&&(!myTD||myTD.has(d.id))).map(d=>{ const all=tl.filter(t=>(t.dept||'mkt')===d.id), hideDone=s.tStatus==='all', vis=hideDone?all.filter(t=>t.status!=='done'):all, dn=all.length-vis.length, O={late:0,blocked:1,doing:2,review:3,todo:4,done:5};
-        const cards=vis.slice().sort((a,b)=>(O[this.stOf(a)]-O[this.stOf(b)])||(a.due||'').localeCompare(b.due||'')).map(t=>{ const st=this.stOf(t), sc=SCHIP[st], ld=this.lateDays(t);
-          return {title:t.title,tag:this.tagOf(t),status:DOT[t.status].label,sBg:SCHIP[t.status][0],sFg:SCHIP[t.status][1],who:P(t.who).name.split(' ')[0],due:t.due?dLabel(t.due):'—',lateShort:ld&&t.status!=='done'?ld+'d late':'',lateColor:'#DC2626',go:()=>this.openTask(t.id)}; });
-        return {label:d.name,dot:d.dot,canRemove:isOwner,remove:()=>this.removeTDept(d.id),cards,empty:!cards.length,countText:vis.length+(hideDone?' open':''),hasDone:hideDone&&dn>0,doneText:dn+' completed'}; }),
-      showRec:s.showRec,toggleRec:()=>this.setState(z=>({showRec:!z.showRec})),recBg:s.showRec?'#EEF0FF':'#fff',recBorder:s.showRec?'#A5A6F6':'#E2E8F0',
-      recCount:String(s.series.filter(x=>x.active&&(x.dept||'mkt')==='mkt'&&(x.client?visIds.has(x.client):true)).length),noSeries:!s.series.some(x=>(x.dept||'mkt')==='mkt'&&(x.client?visIds.has(x.client):true)),
-      series:s.series.filter(x=>(x.dept||'mkt')==='mkt'&&(x.client?visIds.has(x.client):true)).map(x=>{const nx=x.active?nextOcc(x.rule,addD(TODAY,1)):null, ce=isOwner||s.viewAs==='p2'||x.who===s.viewAs||x.by===s.viewAs;
-        return {title:x.title,tag:this.tagOf(x),who:P(x.who).name,rule:ruleText(x.rule),next:x.active?(nx?'Next '+DOW[pd(nx).getDay()]+', '+dLabel(nx):'No more dates'):'—',state:x.active?'Active':'Stopped',sBg:x.active?'#DCFCE7':'#F1F5F9',sFg:x.active?'#15803D':'#475569',canEdit:ce,toggleLabel:x.active?'Stop':'Resume',toggle:()=>this.toggleSeries(x.id)};}),add:()=>this.openModal('task'),sortLabel:s.tSortAsc?'Date ↑':'Date ↓',toggleSort:()=>this.setState(z=>({tSortAsc:!z.tSortAsc})),
+      const mySeries=s.series.filter(x=>{ const visOk=x.client?visIds.has(x.client):true; if(!visOk) return false; if(isOwner&&s.tWho!=='all') return x.who===s.tWho; return x.who===s.viewAs; });
+      const activeMySeries=mySeries.filter(x=>x.active);
+      const tk={q:s.tq,onQ:e=>this.setState({tq:e.target.value}),
+        monthLabel:allM?'All months':ymLabel(s.tYM),prevMonth:()=>this.setState({tYM:ymAdd(curYM,-1)}),nextMonth:()=>this.setState({tYM:ymAdd(curYM,1)}),
+        thisMonth:()=>this.setState({tYM:TODAY.slice(0,7)}),allMonths:()=>this.setState({tYM:'all'}),allMonthsLink:e=>{e.preventDefault(); this.setState({tYM:'all'});},allMBg:allM?'#111827':'#fff',allMFg:allM?'#fff':'#0F172A',
+        hasMonthNote:lateElse>0,monthNote:lateElse+(lateElse===1?' late task from another month is hidden.':' late tasks from other months are hidden.'),who:s.tWho,onWho:e=>this.setState({tWho:e.target.value}),status:s.tStatus,onStatus:e=>this.setState({tStatus:e.target.value}),
+        pri:s.tPri,onPri:e=>this.setState({tPri:e.target.value}),brand:s.tBrand,onBrand:e=>this.setState({tBrand:e.target.value}),
+        dept:s.tDept,onDept:e=>{ const v=e.target.value; if(v===ADD) return this.openQuick('tdept','none','dept'); this.setState({tDept:v}); },isTable:s.tMode==='table',isBoard:s.tMode==='board',isSheet:s.tMode==='sheet',toSheet:()=>this.setState({tMode:'sheet'}),sheetBg:s.tMode==='sheet'?'#fff':'transparent',sheetFg:s.tMode==='sheet'?'#0F172A':'#64748B',sheet:this.sheetVals(tl),
+        toList:()=>this.setState({tMode:'table'}),toBoard:()=>this.setState({tMode:'board'}),addDept:()=>this.openQuick('tdept','none','dept'),listBg:s.tMode==='table'?'#fff':'transparent',listFg:s.tMode==='table'?'#0F172A':'#64748B',boardBg:s.tMode==='board'?'#fff':'transparent',boardFg:s.tMode==='board'?'#0F172A':'#64748B',
+        boardNote:s.tStatus==='all'?'Completed tasks are hidden on the board. Pick Completed in the status filter to see them.':'',
+        cols:TDEPTS.filter(d=>(s.tDept==='all'||d.id===s.tDept)&&(!myTD||myTD.has(d.id))).map(d=>{ const all=tl.filter(t=>(t.dept||'mkt')===d.id), hideDone=s.tStatus==='all', vis=hideDone?all.filter(t=>t.status!=='done'):all, dn=all.length-vis.length, O={late:0,blocked:1,doing:2,review:3,todo:4,done:5};
+          const cards=vis.slice().sort((a,b)=>(O[this.stOf(a)]-O[this.stOf(b)])||(a.due||'').localeCompare(b.due||'')).map(t=>{ const st=this.stOf(t), sc=SCHIP[st], ld=this.lateDays(t);
+            return {title:t.title,tag:this.tagOf(t),status:DOT[t.status].label,sBg:SCHIP[t.status][0],sFg:SCHIP[t.status][1],who:P(t.who).name.split(' ')[0],due:t.due?dLabel(t.due):'—',lateShort:ld&&t.status!=='done'?ld+'d late':'',lateColor:'#DC2626',go:()=>this.openTask(t.id)}; });
+          return {label:d.name,dot:d.dot,canRemove:isOwner,remove:()=>this.removeTDept(d.id),cards,empty:!cards.length,countText:vis.length+(hideDone?' open':''),hasDone:hideDone&&dn>0,doneText:dn+' completed'}; }),
+        showRecBtn:mySeries.length>0,showRec:s.showRec&&mySeries.length>0,toggleRec:()=>this.setState(z=>({showRec:!z.showRec})),recBg:s.showRec?'#EEF0FF':'#fff',recBorder:s.showRec?'#A5A6F6':'#E2E8F0',
+        recCount:String(activeMySeries.length),noSeries:!mySeries.length,
+        series:mySeries.map(x=>{const nx=x.active?nextOcc(x.rule,addD(TODAY,1)):null, ce=isOwner||s.viewAs==='p2'||x.who===s.viewAs||x.by===s.viewAs;
+          return {title:x.title,tag:this.tagOf(x),who:P(x.who).name,rule:ruleText(x.rule),next:x.active?(nx?'Next '+DOW[pd(nx).getDay()]+', '+dLabel(nx):'No more dates'):'—',state:x.active?'Active':'Stopped',sBg:x.active?'#DCFCE7':'#F1F5F9',sFg:x.active?'#15803D':'#475569',canEdit:ce,toggleLabel:x.active?'Stop':'Resume',toggle:()=>this.toggleSeries(x.id)};}),add:()=>this.openModal('task'),sortLabel:s.tSortAsc?'Date ↑':'Date ↓',toggleSort:()=>this.setState(z=>({tSortAsc:!z.tSortAsc})),
       countText:tl.length+(tl.length===1?' task':' tasks')+' · '+lateN+' late',empty:!tl.length,
       rows:tl.map(t=>{const st=this.stOf(t), sc=SCHIP[st], pr=PRI[t.pri||'medium'], ld=this.lateDays(t), done=t.status==='done', open=st==='late';
         const notes=t.notes||[], lk=notes.filter(n=>n.link).pop(), lh=(t.hist||[]).slice(-1)[0], lt=ld?ld+(ld===1?' day':' days'):'—';
@@ -3640,9 +3654,10 @@ class Component extends DCLogic {
         summary:Object.keys(sm).map(k=>({label:sm[k]+' '+DOT[k].label.toLowerCase(),bg:DOT[k].bg,edge:DOT[k].edge})),items:dayItems,empty:!dayItems.length,
         addTask:()=>this.openModal('task',{due:d.day})}; }
     if(d&&d.type==='task'){ const t=s.tasks.find(x=>x.id===d.id); if(t){ const sxd=t.series?s.series.find(z=>z.id===t.series):null; const ro=!this.canTask(t,'edit'), ld=this.lateDays(t), notes=t.notes||[], db=s.draft.brand||t.brand;
-      dr={isTask:true,created:t.created||'—',by:P(t.by).name,hasBack:!!(d.back&&d.back.type==='day'),backLabel:d.back?dLabel(d.back.day):'',back:e=>{e.preventDefault(); this.setState({drawer:d.back});},
+      const isTaskTech=isTechDept(s.draft.dept||t.dept)||isTechPerson(P(s.viewAs))||isTechPerson(P(s.draft.who||t.who));
+      dr={isTask:true,isTech:isTaskTech,created:t.created||'—',by:P(t.by).name,hasBack:!!(d.back&&d.back.type==='day'),backLabel:d.back?dLabel(d.back.day):'',back:e=>{e.preventDefault(); this.setState({drawer:d.back});},
         isRec:!!sxd,recText:sxd?ruleText(sxd.rule)+(sxd.active?'':' · stopped'):'',canStop:!!sxd&&(isOwner||s.viewAs==='p2'||sxd.who===s.viewAs||sxd.by===s.viewAs),stopLabel:sxd&&sxd.active?'Stop repeating':'Resume',stopRec:()=>sxd&&this.toggleSeries(sxd.id),
-        kicker:'Task · '+this.tagOf(t),title:t.title,client:this.tgtOf(t),brand:B(t.brand).name,hasClient:!!t.client,readOnly:ro,goClient:e=>{e.preventDefault(); if(t.client) this.openClient(t.client,'tasks');},
+        kicker:'Task · '+this.tagOf(t),title:t.title,client:this.tgtOf(t),brand:B(t.brand).name,hasClient:!isTaskTech&&!!t.client,readOnly:ro,goClient:e=>{e.preventDefault(); if(t.client) this.openClient(t.client,'tasks');},
         forOpts:isAgency(db)?[{id:'',name:B(db).name+' operations'},...vis.filter(c=>c.brand===db).map(c=>({id:c.id,name:c.name}))]:[{id:'',name:B(db).name},...(B(db).areas||[]).map(a=>({id:'@'+a,name:a})),{id:ADD,name:'+ Add area'}],
         isLate:ld>0,lateText:ld+(ld===1?' day':' days')+' late'+(t.status==='done'?', submitted '+dLabel(this.doneAt(t)):', was due '+dLabel(t.due)),
         notes:notes.slice().reverse().map(n=>{const tx=n.link?n.text.replace(n.link,'').trim():n.text; return {by:P(n.by).name,at:fmtTs(n.at),text:tx,hasText:!!tx,hasLink:!!n.link,link:n.link||'#',linkLabel:n.link?n.link.replace(/^https?:\/\//,''):''};}),
@@ -3682,14 +3697,14 @@ class Component extends DCLogic {
           ...(!isIn&&f.cat==='Partner draw'?[fld('partner','Partner',{options:[{id:'',name:'Select a partner'},...PARTNERS.map(p=>({id:p.id,name:p.name}))]})]:[]),
           fld('status','Status',{options:[{id:'paid',name:isIn?'Received':'Paid'},{id:'pending',name:'Pending'}]})],
         hasNote:true,note:fx&&oN&&aN?'Effective rate: 1 '+f.cur+' = ₹'+(aN/oN).toFixed(2)+'. Reports use the rupee amount received.':fx?'Enter both amounts to see the effective conversion rate.':s.modal==='editEntry'?'The previous value is kept in the audit trail with your name and the time.':'Only clients where you hold Finance access are listed.'}; }
-    if(s.modal==='task'){ const isTech=f.dept==='tech'; const clientField=isTech?null:fld('client','Working for',isAgency(f.brand)?{options:[{id:'',name:B(f.brand).name+' operations (no client)'},...vis.filter(c=>c.brand===f.brand&&this.can(c.id,'edit')).map(c=>({id:c.id,name:c.name}))],add:'client',addKind:'client'}:{options:[{id:'',name:B(f.brand).name},...(B(f.brand).areas||[]).map(a=>({id:'@'+a,name:a}))],add:'area',addKind:'area'}); md={title:'New task',submit:'Create task',fields:[fld('title','Title',{ph:'e.g. October content calendar',full:true}),
+    if(s.modal==='task'){ const isTech=isTechDept(f.dept)||isTechPerson(P(s.viewAs))||isTechPerson(P(f.who)); const clientField=isTech?null:fld('client','Working for',isAgency(f.brand)?{options:[{id:'',name:B(f.brand).name+' operations (no client)'},...vis.filter(c=>c.brand===f.brand&&this.can(c.id,'edit')).map(c=>({id:c.id,name:c.name}))],add:'client',addKind:'client'}:{options:[{id:'',name:B(f.brand).name},...(B(f.brand).areas||[]).map(a=>({id:'@'+a,name:a}))],add:'area',addKind:'area'}); md={title:'New task',submit:'Create task',fields:[fld('title','Title',{ph:'e.g. October content calendar',full:true}),
       fld('brand','Brand',{options:brandOpts,add:'brand',addKind:'brand'}),...(clientField?[clientField]:[]),
       fld('who','Assignee',{options:teamOpts,add:'team member',addKind:'member'}),fld('by','Assigned by',{options:teamOpts}),
       fld('repeat','Repeat',{options:[{id:'none',name:'Does not repeat'},{id:'daily',name:'Every day'},{id:'weekdays',name:'Every weekday (Mon to Fri)'},{id:'weekly',name:'Every week'},{id:'every',name:'Every few days'}]}),
       fld('due',f.repeat&&f.repeat!=='none'?'Starts on':'Due date',{type:'date'}),
       ...(f.repeat==='weekly'?[fld('rday','On',{options:DOWL.map((d,i)=>({id:String(i),name:d}))})]:[]),...(f.repeat==='every'?[fld('every','Every how many days',{type:'number',ph:'e.g. 3'})]:[]),
       ...(f.repeat&&f.repeat!=='none'?[fld('time','Time',{type:'time'}),fld('until','Ends on (optional)',{type:'date'})]:[]),fld('status','Status',{options:STATUS.map(x=>({id:x.id,name:x.label}))}),
-      fld('dept','Department',{options:TDEPTS.filter(d=>!myTD||myTD.has(d.id)).map(d=>({id:d.id,name:d.name})),add:'department',addKind:'tdept'}),fld('pri','Priority',{options:[{id:'high',name:'High'},{id:'medium',name:'Medium'},{id:'low',name:'Low'}]}),fld('est','Estimate (hours)',{type:'number',ph:'e.g. 4'}),fld('note','Note',{ph:'Optional. Paste a doc link to attach it.',full:true})],hasNote:true,note:'Pick operations for internal work on the brand, or a client when the work is for them.'}; }
+      fld('dept','Department',{options:TDEPTS.filter(d=>!myTD||myTD.has(d.id)).map(d=>({id:d.id,name:d.name})),add:'department',addKind:'tdept'}),fld('pri','Priority',{options:[{id:'high',name:'High'},{id:'medium',name:'Medium'},{id:'low',name:'Low'}]}),fld('est','Estimate (hours)',{type:'number',ph:'e.g. 4'}),fld('note','Note',{ph:'Optional. Paste a doc link to attach it.',full:true})],hasNote:true,note:isTech?'Tech tasks are internal engineering and platform work.':'Pick operations for internal work on the brand, or a client when the work is for them.'}; }
     if(s.modal==='client') md={title:'New client',submit:'Add client',fields:[fld('name','Client name',{ph:'e.g. Northwind Foods',full:true}),fld('brand','Brand',{options:brandOpts,add:'brand',addKind:'brand'}),
       fld('company','Company',{ph:'Legal or trading name'}),fld('retainer','Monthly retainer (₹)',{ph:'e.g. 150000'}),fld('sinceDate','Onboard date',{type:'date'}),fld('payDay','Paid date',{options:PAYDAYS}),fld('services','Services provided',{ph:'e.g. LinkedIn and X management',full:true}),fld('contact','Main contact',{ph:'Name',full:true})],hasNote:true,note:'Team members start with no access to a new client. Finance keeps Finance access.'};
     if(s.modal==='editMember') md={title:'Edit team member',submit:'Save changes',fields:[fld('name','Full name'),fld('role','Role'),
@@ -3803,12 +3818,14 @@ class Component extends DCLogic {
       assigneeChips,allowDrop:e=>e.preventDefault(),endDrag:()=>this.setState({dragId:null}),
       isOwner,notOwner:!isOwner,matrix,matrixCols:CLIENTS.map(c=>c.name),legend,auditRows,auditChips,
       drawerOpen:!!(d&&(dr.isTask||dr.isPerson||dr.isDay||dr.isClientD)),dr,draft:s.draft,
-      onDraft:e=>{const {name,value}=e.target; if(value===ADD) return this.openQuick(name==='dept'?'tdept':name==='client'?'area':'member','draft',name); this.setState(z=>({draft:{...z.draft,[name]:value,...(name==='brand'&&z.draft.client&&C(z.draft.client).brand!==value?{client:''}:{})}}));},closeDrawer:()=>this.setState({drawer:null}),
+      onDraft:e=>{const {name,value}=e.target; if(value===ADD) return this.openQuick(name==='dept'?'tdept':name==='client'?'area':'member','draft',name); this.setState(z=>({draft:{...z.draft,[name]:value,...(name==='brand'&&z.draft.client&&C(z.draft.client).brand!==value?{client:''}:{}),...((name==='dept'&&isTechDept(value))||(name==='who'&&isTechPerson(P(value)))?{client:''}:{})}}));},closeDrawer:()=>this.setState({drawer:null}),
       saveTask:()=>this.saveTask(),saveLabel:s.saving?'Saving':'Save',saveDisabled:s.saving||!!dr.readOnly,saveBg:s.saving||dr.readOnly?'#64748B':'#5B5BD6',
       saveNote:s.saving?'Writing to the database':'Saved only after the database confirms.',
       modalOpen:!!s.modal,md,
       onField:e=>{const {name,value}=e.target; if(value===ADD){ const fd=(this._fields||[]).find(x=>x.name===name); return this.openQuick(fd&&fd.add,'form',name);} this.setState(z=>{ const ex={}; const mo=MNF[+(z.form.date||TODAY).slice(5,7)-1];
         if(name==='brand'&&z.form.client&&C(z.form.client).brand!==value) ex.client='';
+        if(name==='dept'&&isTechDept(value)) ex.client='';
+        if(name==='who'&&isTechPerson(P(value))) ex.client='';
         if(name==='emp'&&value){ const p=P(value); if(!z.form.amount&&p.hr&&p.hr.salary) ex.amount=String(p.hr.salary); if(!z.form.desc) ex.desc='Salary, '+p.name+', '+mo; }
         if(name==='partner'&&value&&!z.form.desc) ex.desc='Partner draw, '+PARTNERS.find(p=>p.id===value).name;
         return {form:{...z.form,[name]:value,...ex},errors:{...z.errors,[name]:''}}; });},
