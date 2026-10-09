@@ -2849,7 +2849,7 @@ const occurs=(r,d)=>{ if(d<r.start||(r.until&&d>r.until)) return false; const wd
 const ruleShort=r=>r.freq==='daily'?'Daily':r.freq==='weekdays'?'Weekdays':r.freq==='weekly'?'Weekly':'Every '+r.every+'d';
 const ruleText=r=>(r.freq==='daily'?'Every day':r.freq==='weekdays'?'Every weekday, Monday to Friday':r.freq==='weekly'?'Every '+DOWL[+r.day]:'Every '+r.every+' days')+(r.time?' at '+r.time:'')+(r.until?', until '+dLabel(r.until):'');
 const nextOcc=(r,from)=>{ let d=from; for(let i=0;i<400;i++){ if(r.until&&d>r.until) return null; if(occurs(r,d)) return d; d=addD(d,1); } return null; };
-const mkInst=(x,d)=>({id:'rs'+x.id+'_'+d,title:x.title,brand:x.brand,client:x.client,who:x.who,status:'todo',hours:0,due:d,dueTime:x.rule.time||'',pri:x.pri,est:x.est,by:x.by,created:d,verified:false,series:x.id,hist:[{status:'todo',at:d+'T'+(x.rule.time&&x.rule.time<'08:00'?x.rule.time:'08:00'),by:x.by}],notes:[]});
+const mkInst=(x,d)=>({id:'rs'+x.id+'_'+d,title:x.title,brand:x.brand,client:x.client,who:x.who,status:'todo',dept:x.dept||'mkt',hours:0,due:d,dueTime:x.rule.time||'',pri:x.pri,est:x.est,by:x.by,created:d,verified:false,series:x.id,hist:[{status:'todo',at:d+'T'+(x.rule.time&&x.rule.time<'08:00'?x.rule.time:'08:00'),by:x.by}],notes:[]});
 const SERIES0=[];
 (()=>{ const miss=addD(TODAY,-1); SERIES0.forEach(x=>{ for(let d=x.rule.start; d<=TODAY; d=addD(d,1)){ if(!occurs(x.rule,d)) continue; const t=mkInst(x,d);
   if(d<TODAY&&!(x.id==='s1'&&d===miss)){ t.status='done'; const tm=x.rule.time||'12:00'; t.hist.push({status:'done',at:d+'T'+p2(Math.min(23,+tm.slice(0,2)+1))+tm.slice(2),by:x.who}); t.verified=d<addD(TODAY,-3); }
@@ -2909,7 +2909,7 @@ class Component extends DCLogic {
   state = { view:(this.props.startView==='people'?null:this.props.startView) ?? 'dashboard', clientId:'', tab:'overview', menuOpen:false, w:window.innerWidth,
     viewAs:'', feat:FEAT0, cYM:TODAY.slice(0,7), tq:'', tWho:'all', tStatus:'all', tPri:'all', tBrand:'all', tSortAsc:false, tMode:'table', tDept:'all', tYM:TODAY.slice(0,7), notifs:[], notifOpen:false, myEmail:'', pushOn:false, sheetCols:[], sheetW:{}, tdepts:TDEPTS0, ledger:L0, tasks:TASK0, grants:GRANTS0, audit:AUDIT0, people:PEOPLE0, clients:CLIENTS0, brands:BRANDS0, depts:DEPTS0, expCats:EXPCATS0, incCats:INCCATS0, leaves:LEAVE0,
     q:'', searchOpen:false, addOpen:false, brandFilter:'all', sort:'margin', assignee:'all', auditFilter:'all', deptFilter:'all',
-    calYM:TODAY.slice(0,7), selDay:TODAY, teamTab:'members', payYM:TODAY.slice(0,7), noteText:'', calWho:'all', calBrand:'all', calStatus:'all',
+    calYM:TODAY.slice(0,7), selDay:TODAY, teamTab:'members', payYM:TODAY.slice(0,7), noteText:'', calWho:'all', calBrand:'all', calDept:'all', calStatus:'all',
     lgYM:TODAY.slice(0,7), kpiYM:TODAY.slice(0,7), kpiAll:true, lgType:'all', lgBrand:'all',
     auth:'loading', af:{name:'',company:'',email:'',password:'',confirm:'',agree:false,remember:true}, notice:'', ws:null, wsName:'', wsList:[], me:'', owners:[], partners:[], relTypes:[], sync:'idle', aerr:{}, showPw:false, aBusy:false,
     im:{...IM0}, series:SERIES0, showRec:false, drawer:null, draft:{}, saving:false, modal:null, form:{}, errors:{}, quick:null, toast:null, dragId:null };
@@ -3094,6 +3094,8 @@ class Component extends DCLogic {
   removeTDept(id){ const s=this.state, d=s.tdepts.find(x=>x.id===id); if(!d) return; if(s.tdepts.length<=1) return this.toast('Keep at least one department.');
     const n=s.tasks.filter(t=>(t.dept||'mkt')===id).length; if(n) return this.toast(n+(n===1?' task is':' tasks are')+' in '+d.name+'. Move them to another department first.');
     this.setState(z=>({tdepts:z.tdepts.filter(x=>x.id!==id),tDept:z.tDept===id?'all':z.tDept})); this.log({kind:'task',text:'removed the task department “'+d.name+'”',target:'Tasks',from:d.name,to:''}); this.toast(d.name+' removed.'); }
+  removeTask(id){ const s=this.state, t=s.tasks.find(x=>x.id===id); if(!t) return; if(!this.canTask(t,'edit')) return this.toast('You need Edit access to delete this task.');
+    this.setState(z=>({tasks:z.tasks.filter(x=>x.id!==id),drawer:z.drawer&&z.drawer.id===id?null:z.drawer})); this.log({kind:'task',text:'deleted “'+t.title+'”',target:this.tgtOf(t),from:'Active',to:'Deleted'}); this.toast('Task deleted.'); }
   removeDept(d){ const n=this.state.people.filter(p=>p.team&&p.hr&&p.hr.dept===d).length;
     if(n) return this.toast(n+(n===1?' member is':' members are')+' in '+d+'. Move them to another department first.');
     this.setState(s=>({depts:s.depts.filter(x=>x!==d),deptFilter:s.deptFilter===d?'all':s.deptFilter})); this.log({kind:'team',text:'removed the department “'+d+'”',target:'Team',from:d,to:''}); this.toast(d+' removed.'); }
@@ -3177,7 +3179,7 @@ class Component extends DCLogic {
       if(Object.keys(err).length) return this.setState({errors:err});
       if(f.repeat&&f.repeat!=='none'){ const ev=Math.round(+f.every); if(f.repeat==='every'&&(!ev||ev<1)) err.every='Enter a number of days, 1 or more.'; const st=f.due||TODAY; if(f.until&&f.until<st) err.until='Ends before it starts.';
         if(Object.keys(err).length) return this.setState({errors:err});
-        const x={id:this.newId('s'),title:f.title.trim(),brand:f.brand,...splitFor(f.client),who:f.who,pri:f.pri||'medium',est:+f.est||null,by:f.by||s.viewAs,active:true,rule:{freq:f.repeat,day:+f.rday,every:ev||1,time:f.time||'',start:st,until:f.until||''}};
+        const x={id:this.newId('s'),title:f.title.trim(),brand:f.brand,...splitFor(f.client),who:f.who,dept:f.dept||'mkt',pri:f.pri||'medium',est:+f.est||null,by:f.by||s.viewAs,active:true,rule:{freq:f.repeat,day:+f.rday,every:ev||1,time:f.time||'',start:st,until:f.until||''}};
         this.setState(z=>({series:[...z.series,x]})); setTimeout(()=>this.rollSeries(),0); this.notify(x.who,P(s.me).name+' assigned you the recurring task “'+x.title+'”.',null);
         const nx=nextOcc(x.rule,st<TODAY?TODAY:st);
         this.log({kind:'task',text:'set up the recurring task “'+x.title+'”',target:this.tgtOf(x),from:'',to:ruleText(x.rule)}); return done('Recurring task set up. '+(nx?'Next one: '+dLabel(nx)+(x.rule.time?' at '+x.rule.time:'')+'.':'')); }
@@ -3431,7 +3433,7 @@ class Component extends DCLogic {
 
     // calendar
     const [cy,cm]=s.calYM.split('-').map(Number); const lead=(new Date(cy,cm-1,1).getDay()+6)%7, dim=new Date(cy,cm,0).getDate();
-    const calBase=vTasks.filter(t=>t.due&&t.due.startsWith(s.calYM)&&(s.calWho==='all'||t.who===s.calWho)&&(s.calBrand==='all'||t.brand===s.calBrand));
+    const calBase=vTasks.filter(t=>t.due&&t.due.startsWith(s.calYM)&&(s.calWho==='all'||t.who===s.calWho)&&(s.calBrand==='all'||t.brand===s.calBrand)&&(s.calDept==='all'||(t.dept||'mkt')===s.calDept));
     const cnt=k=>calBase.filter(t=>this.stOf(t)===k).length;
     const calFilt=s.calStatus==='all'?calBase:calBase.filter(t=>this.stOf(t)===s.calStatus);
     const statDef=[['all','Total',calBase.length,'#5B5BD6'],['todo','Not started',cnt('todo'),'#64748B'],['doing','In progress',cnt('doing'),'#2563EB'],['review','Review',cnt('review'),'#D97706'],['blocked','Blocked',cnt('blocked'),'#0F172A'],['done','Completed',cnt('done'),'#16A34A'],['late','Late',cnt('late'),'#DC2626']];
@@ -3453,7 +3455,7 @@ class Component extends DCLogic {
       ...dayTs.map(t=>{const st=this.stOf(t), sc=SCHIP[st]; return {title:t.title,meta:this.tagOf(t)+' · '+P(t.who).name,bg:DOT[st].bg,edge:DOT[st].edge,hasStatus:true,status:DOT[st].label,sBg:sc[0],sFg:sc[1],go:()=>this.openTask(t.id,{type:'day',day:s.selDay})};})];
     const sd=selIn?pd(s.selDay):null;
     const cal={label:ymLabel(s.calYM),prev:()=>this.setState({calYM:ymAdd(s.calYM,-1)}),next:()=>this.setState({calYM:ymAdd(s.calYM,1)}),today:()=>this.setState({calYM:TODAY.slice(0,7),selDay:TODAY}),
-      who:s.calWho,brand:s.calBrand,onWho:e=>this.setState({calWho:e.target.value}),onBrand:e=>this.setState({calBrand:e.target.value}),
+      who:s.calWho,brand:s.calBrand,dept:s.calDept,onWho:e=>this.setState({calWho:e.target.value}),onBrand:e=>this.setState({calBrand:e.target.value}),onDept:e=>this.setState({calDept:e.target.value}),
       stats:statDef.map(([id,label,value,color])=>{const a=s.calStatus===id; return {label,value:String(value),color,bg:a?'rgba(91,91,214,.1)':'rgba(100,116,139,.05)',border:a?'#5B5BD6':'transparent',go:()=>this.setState({calStatus:id})};}),
       dows:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>narrow?d[0]:d.toUpperCase()),cells,legend:['todo','doing','review','blocked','done','late'].map(k=>DOT[k]),
       dayTitle:sd?DOW[sd.getDay()]+', '+sd.getDate()+' '+MNF[sd.getMonth()]:'Select a day',dayItems,dayEmpty:!dayItems.length,
@@ -3593,8 +3595,8 @@ class Component extends DCLogic {
           return {title:t.title,tag:this.tagOf(t),status:DOT[t.status].label,sBg:SCHIP[t.status][0],sFg:SCHIP[t.status][1],who:P(t.who).name.split(' ')[0],due:t.due?dLabel(t.due):'—',lateShort:ld&&t.status!=='done'?ld+'d late':'',lateColor:'#DC2626',go:()=>this.openTask(t.id)}; });
         return {label:d.name,dot:d.dot,canRemove:isOwner,remove:()=>this.removeTDept(d.id),cards,empty:!cards.length,countText:vis.length+(hideDone?' open':''),hasDone:hideDone&&dn>0,doneText:dn+' completed'}; }),
       showRec:s.showRec,toggleRec:()=>this.setState(z=>({showRec:!z.showRec})),recBg:s.showRec?'#EEF0FF':'#fff',recBorder:s.showRec?'#A5A6F6':'#E2E8F0',
-      recCount:String(s.series.filter(x=>x.active&&(x.client?visIds.has(x.client):true)).length),noSeries:!s.series.some(x=>x.client?visIds.has(x.client):true),
-      series:s.series.filter(x=>x.client?visIds.has(x.client):true).map(x=>{const nx=x.active?nextOcc(x.rule,addD(TODAY,1)):null, ce=isOwner||s.viewAs==='p2'||x.who===s.viewAs||x.by===s.viewAs;
+      recCount:String(s.series.filter(x=>x.active&&(x.dept||'mkt')==='mkt'&&(x.client?visIds.has(x.client):true)).length),noSeries:!s.series.some(x=>(x.dept||'mkt')==='mkt'&&(x.client?visIds.has(x.client):true)),
+      series:s.series.filter(x=>(x.dept||'mkt')==='mkt'&&(x.client?visIds.has(x.client):true)).map(x=>{const nx=x.active?nextOcc(x.rule,addD(TODAY,1)):null, ce=isOwner||s.viewAs==='p2'||x.who===s.viewAs||x.by===s.viewAs;
         return {title:x.title,tag:this.tagOf(x),who:P(x.who).name,rule:ruleText(x.rule),next:x.active?(nx?'Next '+DOW[pd(nx).getDay()]+', '+dLabel(nx):'No more dates'):'—',state:x.active?'Active':'Stopped',sBg:x.active?'#DCFCE7':'#F1F5F9',sFg:x.active?'#15803D':'#475569',canEdit:ce,toggleLabel:x.active?'Stop':'Resume',toggle:()=>this.toggleSeries(x.id)};}),add:()=>this.openModal('task'),sortLabel:s.tSortAsc?'Date ↑':'Date ↓',toggleSort:()=>this.setState(z=>({tSortAsc:!z.tSortAsc})),
       countText:tl.length+(tl.length===1?' task':' tasks')+' · '+lateN+' late',empty:!tl.length,
       rows:tl.map(t=>{const st=this.stOf(t), sc=SCHIP[st], pr=PRI[t.pri||'medium'], ld=this.lateDays(t), done=t.status==='done', open=st==='late';
@@ -3646,7 +3648,8 @@ class Component extends DCLogic {
         notes:notes.slice().reverse().map(n=>{const tx=n.link?n.text.replace(n.link,'').trim():n.text; return {by:P(n.by).name,at:fmtTs(n.at),text:tx,hasText:!!tx,hasLink:!!n.link,link:n.link||'#',linkLabel:n.link?n.link.replace(/^https?:\/\//,''):''};}),
         noteCount:notes.length?String(notes.length):'',noNotes:!notes.length,canNote:!ro||t.who===s.viewAs,noteEmpty:!s.noteText.trim(),noteBg:s.noteText.trim()?'#5B5BD6':'#94A3B8',addNote:()=>this.addNote(t.id),
         shist:(t.hist||[]).slice().reverse().map(x=>({label:DOT[x.status].label,by:P(x.by).name,at:fmtTs(x.at),bg:DOT[x.status].bg,edge:DOT[x.status].edge})),
-        statuses:STATUS.map(x=>({label:x.label,go:()=>this.setState(z=>({draft:{...z.draft,status:x.id}})),bg:s.draft.status===x.id?'#fff':'transparent',fg:s.draft.status===x.id?'#111827':'#64748B'}))}; } }
+        statuses:STATUS.map(x=>({label:x.label,go:()=>this.setState(z=>({draft:{...z.draft,status:x.id}})),bg:s.draft.status===x.id?'#fff':'transparent',fg:s.draft.status===x.id?'#111827':'#64748B'})),
+        canRemove:!ro,remove:()=>this.removeTask(t.id),removeLabel:'Delete task'}; } }
     if(d&&d.type==='person'){ const p=P(d.id); const g=p.team?CLIENTS.map(c=>({c,l:this.lvl(p.id,c.id)})).filter(x=>x.l!=='none').map(x=>x.c.name+' · '+LVL[x.l]):[];
       const pt=vTasks.filter(t=>t.who===p.id&&t.status!=='done'); const h=p.hr;
       dr={isPerson:true,isTeam:!!p.team,kicker:p.team?'Team · '+(h?h.dept:p.role):'Person · one record',title:p.name,
@@ -3679,14 +3682,14 @@ class Component extends DCLogic {
           ...(!isIn&&f.cat==='Partner draw'?[fld('partner','Partner',{options:[{id:'',name:'Select a partner'},...PARTNERS.map(p=>({id:p.id,name:p.name}))]})]:[]),
           fld('status','Status',{options:[{id:'paid',name:isIn?'Received':'Paid'},{id:'pending',name:'Pending'}]})],
         hasNote:true,note:fx&&oN&&aN?'Effective rate: 1 '+f.cur+' = ₹'+(aN/oN).toFixed(2)+'. Reports use the rupee amount received.':fx?'Enter both amounts to see the effective conversion rate.':s.modal==='editEntry'?'The previous value is kept in the audit trail with your name and the time.':'Only clients where you hold Finance access are listed.'}; }
-    if(s.modal==='task') md={title:'New task',submit:'Create task',fields:[fld('title','Title',{ph:'e.g. October content calendar',full:true}),
-      fld('brand','Brand',{options:brandOpts,add:'brand',addKind:'brand'}),fld('client','Working for',isAgency(f.brand)?{options:[{id:'',name:B(f.brand).name+' operations (no client)'},...vis.filter(c=>c.brand===f.brand&&this.can(c.id,'edit')).map(c=>({id:c.id,name:c.name}))],add:'client',addKind:'client'}:{options:[{id:'',name:B(f.brand).name},...(B(f.brand).areas||[]).map(a=>({id:'@'+a,name:a}))],add:'area',addKind:'area'}),
+    if(s.modal==='task'){ const isTech=f.dept==='tech'; const clientField=isTech?null:fld('client','Working for',isAgency(f.brand)?{options:[{id:'',name:B(f.brand).name+' operations (no client)'},...vis.filter(c=>c.brand===f.brand&&this.can(c.id,'edit')).map(c=>({id:c.id,name:c.name}))],add:'client',addKind:'client'}:{options:[{id:'',name:B(f.brand).name},...(B(f.brand).areas||[]).map(a=>({id:'@'+a,name:a}))],add:'area',addKind:'area'}); md={title:'New task',submit:'Create task',fields:[fld('title','Title',{ph:'e.g. October content calendar',full:true}),
+      fld('brand','Brand',{options:brandOpts,add:'brand',addKind:'brand'}),...(clientField?[clientField]:[]),
       fld('who','Assignee',{options:teamOpts,add:'team member',addKind:'member'}),fld('by','Assigned by',{options:teamOpts}),
       fld('repeat','Repeat',{options:[{id:'none',name:'Does not repeat'},{id:'daily',name:'Every day'},{id:'weekdays',name:'Every weekday (Mon to Fri)'},{id:'weekly',name:'Every week'},{id:'every',name:'Every few days'}]}),
       fld('due',f.repeat&&f.repeat!=='none'?'Starts on':'Due date',{type:'date'}),
       ...(f.repeat==='weekly'?[fld('rday','On',{options:DOWL.map((d,i)=>({id:String(i),name:d}))})]:[]),...(f.repeat==='every'?[fld('every','Every how many days',{type:'number',ph:'e.g. 3'})]:[]),
       ...(f.repeat&&f.repeat!=='none'?[fld('time','Time',{type:'time'}),fld('until','Ends on (optional)',{type:'date'})]:[]),fld('status','Status',{options:STATUS.map(x=>({id:x.id,name:x.label}))}),
-      fld('dept','Department',{options:TDEPTS.filter(d=>!myTD||myTD.has(d.id)).map(d=>({id:d.id,name:d.name})),add:'department',addKind:'tdept'}),fld('pri','Priority',{options:[{id:'high',name:'High'},{id:'medium',name:'Medium'},{id:'low',name:'Low'}]}),fld('est','Estimate (hours)',{type:'number',ph:'e.g. 4'}),fld('note','Note',{ph:'Optional. Paste a doc link to attach it.',full:true})],hasNote:true,note:'Pick operations for internal work on the brand, or a client when the work is for them.'};
+      fld('dept','Department',{options:TDEPTS.filter(d=>!myTD||myTD.has(d.id)).map(d=>({id:d.id,name:d.name})),add:'department',addKind:'tdept'}),fld('pri','Priority',{options:[{id:'high',name:'High'},{id:'medium',name:'Medium'},{id:'low',name:'Low'}]}),fld('est','Estimate (hours)',{type:'number',ph:'e.g. 4'}),fld('note','Note',{ph:'Optional. Paste a doc link to attach it.',full:true})],hasNote:true,note:'Pick operations for internal work on the brand, or a client when the work is for them.'}; }
     if(s.modal==='client') md={title:'New client',submit:'Add client',fields:[fld('name','Client name',{ph:'e.g. Northwind Foods',full:true}),fld('brand','Brand',{options:brandOpts,add:'brand',addKind:'brand'}),
       fld('company','Company',{ph:'Legal or trading name'}),fld('retainer','Monthly retainer (₹)',{ph:'e.g. 150000'}),fld('sinceDate','Onboard date',{type:'date'}),fld('payDay','Paid date',{options:PAYDAYS}),fld('services','Services provided',{ph:'e.g. LinkedIn and X management',full:true}),fld('contact','Main contact',{ph:'Name',full:true})],hasNote:true,note:'Team members start with no access to a new client. Finance keeps Finance access.'};
     if(s.modal==='editMember') md={title:'Edit team member',submit:'Save changes',fields:[fld('name','Full name'),fld('role','Role'),
