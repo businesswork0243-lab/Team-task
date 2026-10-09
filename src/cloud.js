@@ -42,14 +42,37 @@
   const must = ({ data, error }) => { if (error) throw error; return data; };
 
   function errText(e) {
-    const m = String((e && (e.message || e.error_description)) || e || '');
+    if (!e) return 'Unknown error occurred.';
+    let m = '';
+    if (typeof e === 'string') {
+      m = e;
+    } else if (e instanceof Error) {
+      m = e.message || '';
+    } else if (typeof e === 'object') {
+      m = e.message || e.error_description || e.details || e.hint || (typeof e.error === 'string' ? e.error : '') || '';
+      if (!m) {
+        try { m = JSON.stringify(e); } catch (_) { m = String(e); }
+      }
+    } else {
+      m = String(e);
+    }
+    if (/failed to fetch|networkerror|load failed|network request failed/i.test(m)) {
+      return 'Failed to fetch: Cannot reach the database. Check your internet connection.';
+    }
     if (/invalid login credentials/i.test(m)) return 'Email or password is incorrect.';
     if (/email not confirmed/i.test(m)) return 'Confirm your email first. Check your inbox for the link.';
     if (/already registered|already been registered/i.test(m)) return 'An account already uses this email. Log in instead.';
     if (/rate limit|too many/i.test(m)) return 'Too many attempts. Wait a minute and try again.';
     if (/password should be|weak password/i.test(m)) return 'Choose a stronger password (at least 8 characters).';
-    if (/failed to fetch|network/i.test(m)) return 'Cannot reach the server. Check your connection.';
-    if (/app_my_workspaces|app_set_member_login|app_items|does not exist|schema cache|could not find the function/i.test(m)) return 'The database is not up to date. Run supabase/schema.sql in the Supabase SQL Editor.';
+    if (/row-level security|permission denied|not authorized|violates row-level security/i.test(m)) {
+      return 'Permission denied by database security policies (RLS). You might not be signed in or lack permissions in this workspace.';
+    }
+    if (/app_my_workspaces|app_set_member_login|app_items|does not exist|schema cache|could not find the function/i.test(m)) {
+      return 'The database schema is not up to date. Run supabase/schema.sql in the Supabase SQL Editor.';
+    }
+    if (/jwt expired|session expired|invalid token/i.test(m)) {
+      return 'Your session has expired. Please log out and sign in again.';
+    }
     return m || 'Something went wrong. Try again.';
   }
 
@@ -72,12 +95,16 @@
   }
 
   async function saveRows(ws, rows) {
+    if (!enabled || !sb) throw new Error('Database connection is not initialized.');
+    if (!ws) throw new Error('No active workspace selected.');
+    if (!rows || !rows.length) return;
     const stamped = rows.map((r) => ({
       workspace_id: ws, coll: r.coll, id: r.id,
       data: r.deleted ? null : r.data, deleted: !!r.deleted, client_id: clientId,
     }));
     for (let i = 0; i < stamped.length; i += 250) {
-      must(await sb.from('app_items').upsert(stamped.slice(i, i + 250), { onConflict: 'workspace_id,coll,id' }));
+      const res = await sb.from('app_items').upsert(stamped.slice(i, i + 250), { onConflict: 'workspace_id,coll,id' });
+      must(res);
     }
   }
 

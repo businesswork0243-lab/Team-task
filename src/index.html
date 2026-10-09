@@ -2962,9 +2962,9 @@ class Component extends DCLogic {
       const pushIds=this._pushQ?rows.filter(r=>r.coll==='notifs'&&!r.deleted&&this._pushQ.has(r.id)).map(r=>r.id):[];
       if(pushIds.length){ pushIds.forEach(id=>this._pushQ.delete(id)); window.Cloud.sendPush(ws,pushIds); }
       if(this._memDirty){ this._memDirty=false; await this.membersSync(); }
-      this._errShown=false; if(this.state.ws===ws) this.setState({sync:this._pending.size?'saving':'saved'}); }
+      this._errShown=false; if(this.state.ws===ws){ this.setState({sync:this._pending.size?'saving':'saved'}); this.toast('Saved'); } }
     catch(e){ console.error(e); rows.forEach(r=>{ const k=pkey(r.coll,r.id); if(!this._pending.has(k)) this._pending.set(k,r); });
-      if(this.state.ws===ws){ this.setState({sync:'error'}); if(!this._errShown){ this._errShown=true; this.toast('Changes not saved yet. Retrying…'); } this._ft=setTimeout(()=>this.flush(),5000); } }
+      if(this.state.ws===ws){ this.setState({sync:'error'}); if(!this._errShown){ this._errShown=true; this.toast('Save failed: '+window.Cloud.errText(e)); } this._ft=setTimeout(()=>this.flush(),5000); } }
     finally{ this._flushing=false; if(this._again){ this._again=false; this.flush(); } } }
   applyRemote(r){ const k=r.coll==='_doc'?r.id:r.coll, t=SYNC[k]; if(!t||!this._synced) return;
     this.queueSync(); if(this._pending.has(pkey(r.coll,r.id))) return;
@@ -2989,7 +2989,7 @@ class Component extends DCLogic {
       const del=[...have.values()].filter(h=>!want.has(h.email)&&h.user_id!==this._uid).map(h=>h.email);
       if(up.length) await Cl.upsertMembers(s.ws,up); if(del.length) await Cl.deleteMembers(s.ws,del);
       if(up.length||del.length) this._members=await Cl.listMembers(s.ws);
-    }catch(e){ console.error('member sync',e); this._memDirty=true; this._members=null; } }
+    }catch(e){ console.error('member sync',e); this._memDirty=true; this._members=null; this.toast('Team sync failed: '+Cl.errText(e)); } }
   async logout(){ this.queueSync(); await this.flush();
     if(this._pending.size&&!window.confirm('Some changes are not saved yet. Log out anyway?')) return;
     await window.Cloud.disablePush();

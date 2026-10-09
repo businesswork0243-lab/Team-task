@@ -1,0 +1,1 @@
+window.APP_CONFIG = {"supabaseUrl":"https://rvgmiiglswnlraknozcb.supabase.co","supabaseAnonKey":"sb_publishable_sWjXjdhLBQ1VFbT1KKMvOw_0Pk0jGwN","vapidPublicKey":"BMwqiF_lQB-0ARRhh7NxGF7tvh6eEs9Rd2uQ0KqHM6LiCKpsnkEKS205IVBNhvmUYXz2LScFhswK-C5jG1N3cVo"};
