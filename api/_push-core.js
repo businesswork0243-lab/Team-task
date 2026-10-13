@@ -24,7 +24,7 @@ export async function sendPushes({ token, ws, ids }, { admin, push, now = Date.n
     .eq('workspace_id', ws).eq('coll', 'notifs').eq('deleted', false)
     .in('id', ids.slice(0, 20).map(String));
   const { data: wsRow } = await admin.from('app_workspaces').select('name').eq('id', ws).maybeSingle();
-  const title = (wsRow && wsRow.name) || 'Operations';
+  const title = (wsRow && wsRow.name) || 'KEEL';
 
   let sent = 0, skipped = 0, devices = 0;
   for (const r of rows || []) {

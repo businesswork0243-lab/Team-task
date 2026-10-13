@@ -1,6 +1,6 @@
 {
-  "name": "Operations Workspace",
-  "short_name": "Operations",
+  "name": "KEEL",
+  "short_name": "KEEL",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

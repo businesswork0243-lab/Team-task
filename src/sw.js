@@ -9,7 +9,7 @@ self.addEventListener('push', (event) => {
     // The app is open and in front: it already shows the alert in-app.
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     if (wins.some((w) => w.visibilityState === 'visible' && w.focused)) return;
-    await self.registration.showNotification(d.title || 'Operations', {
+    await self.registration.showNotification(d.title || 'KEEL', {
       body: d.body || 'You have a new task.',
       tag: d.tag,
       data: { url: d.url || '/' },

@@ -2,13 +2,13 @@
 <html><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Operations Workspace</title>
+<title>KEEL</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#5B5BD6">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Operations">
+<meta name="apple-mobile-web-app-title" content="KEEL">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%235B5BD6%22/%3E%3Ctext x=%2216%22 y=%2222%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2216%22 font-weight=%22600%22 fill=%22white%22%3EO%3C/text%3E%3C/svg%3E">
 <script>window.__resources={"https://unpkg.com/react@18.3.1/umd/react.production.min.js":"vendor/react.production.min.js","https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js":"vendor/react-dom.production.min.js"};</script>
 <script src="config.js"></script>
@@ -1701,15 +1701,9 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid r
               <button sc-camel-on-click="{{ d.go }}" disabled="{{ d.blank }}" style="min-height:{{ L.calH }};padding:6px;border:0;background:{{ d.bg }};box-shadow:inset 0 0 0 2px {{ d.ring }};text-align:left;display:flex;flex-direction:column;gap:4px;cursor:{{ d.cursor }};min-width:0;overflow:hidden">
                 <span style="font-size:12px;font-weight:{{ d.weight }};color:{{ d.numColor }}">{{ d.n }}</span>
                 <sc-if value="{{ d.hasLabel }}"><span style="font-size:9px;line-height:1.2;color:#C2410C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">{{ d.label }}</span></sc-if>
-                <span style="display:flex;flex-wrap:wrap;gap:3px">
-                  <sc-for list="{{ d.dots }}" as="x"><span style="width:7px;height:7px;border-radius:1px;background:{{ x.bg }};box-shadow:inset 0 0 0 1px {{ x.edge }}"></span></sc-for>
-                </span>
                 <sc-if value="{{ d.hasCount }}"><span style="font-size:10px;font-weight:var(--fw-strong,600);color:{{ d.countColor }}">{{ d.count }}</span></sc-if>
               </button>
             </sc-for>
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:11px;color:#64748B">
-            <sc-for list="{{ cal.legend }}" as="l"><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:1px;background:{{ l.bg }};box-shadow:inset 0 0 0 1px {{ l.edge }}"></span>{{ l.label }}</span></sc-for>
           </div>
         </section>
 
@@ -2131,7 +2125,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid r
           <sc-raw-select value="{{ tk.brand }}" sc-camel-on-change="{{ tk.onBrand }}" style="height:38px;padding:0 10px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;font-size:12px;min-width:0"><option value="all">All brands</option><sc-for list="{{ brandList }}" as="o"><option value="{{ o.id }}">{{ o.name }}</option></sc-for></sc-raw-select>
           <sc-raw-select value="{{ tk.dept }}" sc-camel-on-change="{{ tk.onDept }}" style="height:38px;padding:0 10px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;font-size:12px;min-width:0"><option value="all">All departments</option><sc-for list="{{ tDeptList }}" as="o"><option value="{{ o.id }}">{{ o.name }}</option></sc-for><option value="__add">+ Add department</option></sc-raw-select>
           <div style="display:flex;gap:2px;padding:3px;border-radius:8px;background:#F1F5F9;height:38px;box-sizing:border-box"><button sc-camel-on-click="{{ tk.toList }}" style="border:0;border-radius:6px;padding:0 12px;background:{{ tk.listBg }};color:{{ tk.listFg }};font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer">List</button><button sc-camel-on-click="{{ tk.toBoard }}" style="border:0;border-radius:6px;padding:0 12px;background:{{ tk.boardBg }};color:{{ tk.boardFg }};font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer;white-space:nowrap">Department board</button><button sc-camel-on-click="{{ tk.toSheet }}" style="border:0;border-radius:6px;padding:0 12px;background:{{ tk.sheetBg }};color:{{ tk.sheetFg }};font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer">Sheet</button></div>
-          <sc-if value="{{ tk.showRecBtn }}"><button sc-camel-on-click="{{ tk.toggleRec }}" style="height:38px;padding:0 14px;border:1px solid {{ tk.recBorder }};border-radius:8px;background:{{ tk.recBg }};color:#0F172A;font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer;white-space:nowrap">↻ Recurring {{ tk.recCount }}</button></sc-if>
+          <sc-if value="{{ tk.showRecBtn }}"><button sc-camel-on-click="{{ tk.toggleRec }}" style="height:38px;padding:0 14px;border:1px solid {{ tk.recBorder }};border-radius:8px;background:{{ tk.recBg }};color:#0F172A;font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer;white-space:nowrap">{{ tk.recLabel }}</button></sc-if>
           <button sc-camel-on-click="{{ tk.add }}" style="height:38px;padding:0 16px;border:0;border-radius:8px;background:#5B5BD6;color:#fff;font-size:12px;font-weight:var(--fw-strong,600);cursor:pointer" style-hover="background:#4C4CC4">+ Add task</button>
         </div>
         <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px">
@@ -2695,7 +2689,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid r
     <div style="position:fixed;inset:0;z-index:100;display:flex;background:#F7F8FA;overflow:auto">
       <sc-if value="{{ isWide }}">
         <aside style="flex:0 0 42%;max-width:560px;background:#111827;color:#fff;display:flex;flex-direction:column;justify-content:space-between;gap:32px;padding:40px 48px">
-          <div style="display:flex;align-items:center;gap:10px"><span style="width:34px;height:34px;border-radius:9px;background:#5B5BD6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:var(--fw-strong,600);font-size:15px">O</span><span style="display:flex;flex-direction:column;line-height:1.2"><span style="font-weight:var(--fw-strong,600);font-size:15px;color:#fff">Operations</span><span style="font-size:11px;color:#fff;opacity:.7">Workspace</span></span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:34px;height:34px;border-radius:9px;background:#5B5BD6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:var(--fw-strong,600);font-size:15px">K</span><span style="font-weight:var(--fw-strong,600);font-size:16px;letter-spacing:.12em;color:#fff">KEEL</span></div>
           <div>
             <h2 style="margin:0;font-size:32px;line-height:1.2;letter-spacing:-.02em;max-width:16ch;font-weight:var(--fw-strong,600)">Clients, tasks, payroll and money in one workspace.</h2>
             <p style="margin:16px 0 0;font-size:14px;line-height:1.6;color:#CBD5E1;max-width:40ch">Each person sees only the sections and clients they have been given access to.</p>
@@ -2705,7 +2699,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid r
       </sc-if>
       <div style="flex:1;display:flex;padding:32px 20px;min-width:0">
         <div style="width:100%;max-width:400px;margin:auto;display:flex;flex-direction:column;gap:20px;animation:opRise 300ms ease">
-          <sc-if value="{{ isNarrow }}"><div style="display:flex;align-items:center;gap:10px"><span style="width:34px;height:34px;border-radius:9px;background:#5B5BD6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:var(--fw-strong,600);font-size:15px">O</span><span style="display:flex;flex-direction:column;line-height:1.2"><span style="font-weight:var(--fw-strong,600);font-size:15px;color:#0F172A">Operations</span><span style="font-size:11px;color:#0F172A;opacity:.7">Workspace</span></span></div></sc-if>
+          <sc-if value="{{ isNarrow }}"><div style="display:flex;align-items:center;gap:10px"><span style="width:34px;height:34px;border-radius:9px;background:#5B5BD6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:var(--fw-strong,600);font-size:15px">K</span><span style="font-weight:var(--fw-strong,600);font-size:16px;letter-spacing:.12em;color:#0F172A">KEEL</span></div></sc-if>
           <div>
             <h1 style="margin:0;font-size:26px;letter-spacing:-.01em;font-weight:var(--fw-strong,600)">{{ au.title }}</h1>
             <p style="margin:6px 0 0;font-size:14px;color:#64748B;line-height:1.5">{{ au.sub }}</p>
@@ -3406,7 +3400,7 @@ class Component extends DCLogic {
     const vis=CLIENTS.filter(c=>this.can(c.id,'view')), fin=vis.filter(c=>this.can(c.id,'finance'));
     const visIds=new Set(vis.map(c=>c.id)), finIds=new Set(fin.map(c=>c.id));
     const me=P(s.viewAs), myTD=!OWN(s.viewAs)&&me.taskDepts&&me.taskDepts.length?new Set(me.taskDepts):null;
-    const vTasks=s.tasks.filter(t=>(t.client?visIds.has(t.client):true)&&(!myTD||myTD.has(t.dept||'mkt')||t.who===s.viewAs||t.by===s.viewAs)), vLedger=s.ledger.filter(e=>this.canLedger(e));
+    const vTasks=s.tasks.filter(t=>(!t.series||isOwner||t.who===s.viewAs)&&(t.client?visIds.has(t.client):true)&&(!myTD||myTD.has(t.dept||'mkt')||t.who===s.viewAs||t.by===s.viewAs)), vLedger=s.ledger.filter(e=>this.canLedger(e));
     const team=PEOPLE.filter(p=>p.team);
     const L={pad:narrow?'16px':'32px',rowPad:compact?'9px':'13px',clientCols:narrow?'1fr 1fr':'minmax(0,2fr) repeat(4,minmax(0,1fr))',nameSpan:narrow?'1 / -1':'auto',numAlign:narrow?'left':'right',
       hrCols:narrow?'1fr 1fr':'minmax(0,2.2fr) repeat(5,minmax(0,1fr))',calH:narrow?'70px':'118px',
@@ -3456,9 +3450,9 @@ class Component extends DCLogic {
       const label=hol||(lv.length?lv.join(', ')+' on leave':''); const late=ts.some(t=>this.stOf(t)==='late'); const sel=s.selDay===k;
       cells.push({n:d,go:()=>this.setState({selDay:k,drawer:{type:'day',day:k}}),blank:false,cursor:'pointer',bg:sel?'#EEF0FF':hol?'#FFF7ED':wd===0?'#FEF6F6':wk?'#F8FAFC':'#fff',
         ring:k===TODAY?'#5B5BD6':'transparent',weight:k===TODAY?'var(--fw-strong,600)':'var(--fw-body,400)',numColor:wd===0?'#DC2626':hol?'#C2410C':'#0F172A',label,hasLabel:!!label,
-        dots:ts.slice(0,narrow?4:10).map(t=>DOT[this.stOf(t)]),hasCount:ts.length>0,count:ts.length+(narrow?'':ts.length===1?' task':' tasks'),countColor:late?'#DC2626':'#475569'}); }
+        hasCount:ts.length>0,count:ts.length+(narrow?'':ts.length===1?' task':' tasks'),countColor:late?'#DC2626':'#475569'}); }
     while(cells.length%7) cells.push({blank:true});
-    cells.forEach(c=>{ if(c.blank) Object.assign(c,{n:'',go:()=>{},cursor:'default',bg:'rgba(100,116,139,.09)',ring:'transparent',weight:'var(--fw-body,400)',numColor:'#64748B',hasLabel:false,dots:[],hasCount:false}); });
+    cells.forEach(c=>{ if(c.blank) Object.assign(c,{n:'',go:()=>{},cursor:'default',bg:'rgba(100,116,139,.09)',ring:'transparent',weight:'var(--fw-body,400)',numColor:'#64748B',hasLabel:false,hasCount:false}); });
     const selIn=s.selDay.startsWith(s.calYM);
     const dayTs=selIn?calBase.filter(t=>t.due===s.selDay):[];
     const dayLv=selIn?approved.filter(l=>l.from<=s.selDay&&l.to>=s.selDay):[];
@@ -3469,7 +3463,7 @@ class Component extends DCLogic {
     const cal={label:ymLabel(s.calYM),prev:()=>{this.setState({calYM:ymAdd(s.calYM,-1)});setTimeout(()=>this.rollSeries(),0);},next:()=>{this.setState({calYM:ymAdd(s.calYM,1)});setTimeout(()=>this.rollSeries(),0);},today:()=>{this.setState({calYM:TODAY.slice(0,7),selDay:TODAY});setTimeout(()=>this.rollSeries(),0);},
       who:s.calWho,brand:s.calBrand,dept:s.calDept,onWho:e=>this.setState({calWho:e.target.value}),onBrand:e=>this.setState({calBrand:e.target.value}),onDept:e=>this.setState({calDept:e.target.value}),
       stats:statDef.map(([id,label,value,color])=>{const a=s.calStatus===id; return {label,value:String(value),color,bg:a?'rgba(91,91,214,.1)':'rgba(100,116,139,.05)',border:a?'#5B5BD6':'transparent',go:()=>this.setState({calStatus:id})};}),
-      dows:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>narrow?d[0]:d.toUpperCase()),cells,legend:['todo','doing','review','blocked','done','late'].map(k=>DOT[k]),
+      dows:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>narrow?d[0]:d.toUpperCase()),cells,
       dayTitle:sd?DOW[sd.getDay()]+', '+sd.getDate()+' '+MNF[sd.getMonth()]:'Select a day',dayItems,dayEmpty:!dayItems.length,
       addTask:()=>this.openModal('task',{due:selIn?s.selDay:''})};
 
@@ -3590,12 +3584,13 @@ class Component extends DCLogic {
     const tql=s.tq.trim().toLowerCase(), canVerify=isOwner||s.viewAs==='p2';
     // A task belongs to the month it is due in, or the month it was created if it has no due date.
     const tMon=t=>(t.due||t.created||'').slice(0,7), allM=s.tYM==='all', curYM=allM?TODAY.slice(0,7):s.tYM;
-    const lateElse=allM?0:vTasks.filter(t=>tMon(t)!==s.tYM&&t.status!=='done'&&this.lateDays(t)>0).length;
-    const tl=vTasks.filter(t=>(allM||tMon(t)===s.tYM)&&(s.tWho==='all'||t.who===s.tWho)&&(s.tStatus==='all'||(s.tStatus==='late'?this.stOf(t)==='late':t.status===s.tStatus))&&(s.tPri==='all'||t.pri===s.tPri)&&(s.tBrand==='all'||t.brand===s.tBrand)&&(s.tDept==='all'||(t.dept||'mkt')===s.tDept)&&(!tql||t.title.toLowerCase().includes(tql)||this.tagOf(t).toLowerCase().includes(tql)))
+    const mySeries=s.series.filter(x=>{ const visOk=x.client?visIds.has(x.client):true; if(!visOk) return false; if(isOwner) return s.tWho==='all'||x.who===s.tWho; return x.who===s.viewAs; });
+    const activeMySeries=mySeries.filter(x=>x.active);
+    const recAll=vTasks.filter(t=>t.series), recM=s.showRec&&(recAll.length>0||mySeries.length>0);
+    const lateElse=allM?0:vTasks.filter(t=>!!t.series===recM&&tMon(t)!==s.tYM&&t.status!=='done'&&this.lateDays(t)>0).length;
+    const tl=vTasks.filter(t=>!!t.series===recM&&(allM||tMon(t)===s.tYM)&&(s.tWho==='all'||t.who===s.tWho)&&(s.tStatus==='all'||(s.tStatus==='late'?this.stOf(t)==='late':t.status===s.tStatus))&&(s.tPri==='all'||t.pri===s.tPri)&&(s.tBrand==='all'||t.brand===s.tBrand)&&(s.tDept==='all'||(t.dept||'mkt')===s.tDept)&&(!tql||t.title.toLowerCase().includes(tql)||this.tagOf(t).toLowerCase().includes(tql)))
       .sort((a,b)=>{const r=(a.created||'').localeCompare(b.created||'')||(a.due||'').localeCompare(b.due||''); return s.tSortAsc?r:-r;});
     const lateN=tl.filter(t=>this.lateDays(t)>0).length;
-      const mySeries=s.series.filter(x=>{ const visOk=x.client?visIds.has(x.client):true; if(!visOk) return false; if(isOwner&&s.tWho!=='all') return x.who===s.tWho; return x.who===s.viewAs; });
-      const activeMySeries=mySeries.filter(x=>x.active);
       const tk={q:s.tq,onQ:e=>this.setState({tq:e.target.value}),
         monthLabel:allM?'All months':ymLabel(s.tYM),prevMonth:()=>this.setState({tYM:ymAdd(curYM,-1)}),nextMonth:()=>this.setState({tYM:ymAdd(curYM,1)}),
         thisMonth:()=>this.setState({tYM:TODAY.slice(0,7)}),allMonths:()=>this.setState({tYM:'all'}),allMonthsLink:e=>{e.preventDefault(); this.setState({tYM:'all'});},allMBg:allM?'#111827':'#fff',allMFg:allM?'#fff':'#0F172A',
@@ -3608,11 +3603,11 @@ class Component extends DCLogic {
           const cards=vis.slice().sort((a,b)=>(O[this.stOf(a)]-O[this.stOf(b)])||(a.due||'').localeCompare(b.due||'')).map(t=>{ const st=this.stOf(t), sc=SCHIP[st], ld=this.lateDays(t);
             return {title:t.title,tag:this.tagOf(t),status:DOT[t.status].label,sBg:SCHIP[t.status][0],sFg:SCHIP[t.status][1],who:P(t.who).name.split(' ')[0],due:t.due?dLabel(t.due):'—',lateShort:ld&&t.status!=='done'?ld+'d late':'',lateColor:'#DC2626',go:()=>this.openTask(t.id)}; });
           return {label:d.name,dot:d.dot,canRemove:isOwner,remove:()=>this.removeTDept(d.id),cards,empty:!cards.length,countText:vis.length+(hideDone?' open':''),hasDone:hideDone&&dn>0,doneText:dn+' completed'}; }),
-        showRecBtn:mySeries.length>0,showRec:s.showRec&&mySeries.length>0,toggleRec:()=>this.setState(z=>({showRec:!z.showRec})),recBg:s.showRec?'#EEF0FF':'#fff',recBorder:s.showRec?'#A5A6F6':'#E2E8F0',
-        recCount:String(activeMySeries.length),noSeries:!mySeries.length,
+        showRecBtn:mySeries.length>0||recAll.length>0,showRec:recM,toggleRec:()=>this.setState(z=>({showRec:!z.showRec})),recBg:recM?'#EEF0FF':'#fff',recBorder:recM?'#A5A6F6':'#E2E8F0',
+        recCount:String(activeMySeries.length),recLabel:recM?'← All tasks':'↻ Recurring '+activeMySeries.length,noSeries:!mySeries.length,
         series:mySeries.map(x=>{const nx=x.active?nextOcc(x.rule,addD(TODAY,1)):null, ce=isOwner||s.viewAs==='p2'||x.who===s.viewAs||x.by===s.viewAs;
           return {title:x.title,tag:this.tagOf(x),who:P(x.who).name,rule:ruleText(x.rule),next:x.active?(nx?'Next '+DOW[pd(nx).getDay()]+', '+dLabel(nx):'No more dates'):'—',state:x.active?'Active':'Stopped',sBg:x.active?'#DCFCE7':'#F1F5F9',sFg:x.active?'#15803D':'#475569',canEdit:ce,toggleLabel:x.active?'Stop':'Resume',toggle:()=>this.toggleSeries(x.id)};}),add:()=>this.openModal('task'),sortLabel:s.tSortAsc?'Date ↑':'Date ↓',toggleSort:()=>this.setState(z=>({tSortAsc:!z.tSortAsc})),
-      countText:tl.length+(tl.length===1?' task':' tasks')+' · '+lateN+' late',empty:!tl.length,
+      countText:tl.length+(recM?' recurring':'')+(tl.length===1?' task':' tasks')+' · '+lateN+' late',empty:!tl.length,
       rows:tl.map(t=>{const st=this.stOf(t), sc=SCHIP[st], pr=PRI[t.pri||'medium'], ld=this.lateDays(t), done=t.status==='done', open=st==='late';
         const notes=t.notes||[], lk=notes.filter(n=>n.link).pop(), lh=(t.hist||[]).slice(-1)[0], lt=ld?ld+(ld===1?' day':' days'):'—';
         const sx=t.series?s.series.find(z=>z.id===t.series):null;
