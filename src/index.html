@@ -1701,9 +1701,15 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid r
               <button sc-camel-on-click="{{ d.go }}" disabled="{{ d.blank }}" style="min-height:{{ L.calH }};padding:6px;border:0;background:{{ d.bg }};box-shadow:inset 0 0 0 2px {{ d.ring }};text-align:left;display:flex;flex-direction:column;gap:4px;cursor:{{ d.cursor }};min-width:0;overflow:hidden">
                 <span style="font-size:12px;font-weight:{{ d.weight }};color:{{ d.numColor }}">{{ d.n }}</span>
                 <sc-if value="{{ d.hasLabel }}"><span style="font-size:9px;line-height:1.2;color:#C2410C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">{{ d.label }}</span></sc-if>
+                <span style="display:flex;flex-wrap:wrap;gap:3px">
+                  <sc-for list="{{ d.dots }}" as="x"><span style="width:7px;height:7px;border-radius:1px;background:{{ x.bg }};box-shadow:inset 0 0 0 1px {{ x.edge }}"></span></sc-for>
+                </span>
                 <sc-if value="{{ d.hasCount }}"><span style="font-size:10px;font-weight:var(--fw-strong,600);color:{{ d.countColor }}">{{ d.count }}</span></sc-if>
               </button>
             </sc-for>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:11px;color:#64748B">
+            <sc-for list="{{ cal.legend }}" as="l"><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:1px;background:{{ l.bg }};box-shadow:inset 0 0 0 1px {{ l.edge }}"></span>{{ l.label }}</span></sc-for>
           </div>
         </section>
 
@@ -3450,9 +3456,9 @@ class Component extends DCLogic {
       const label=hol||(lv.length?lv.join(', ')+' on leave':''); const late=ts.some(t=>this.stOf(t)==='late'); const sel=s.selDay===k;
       cells.push({n:d,go:()=>this.setState({selDay:k,drawer:{type:'day',day:k}}),blank:false,cursor:'pointer',bg:sel?'#EEF0FF':hol?'#FFF7ED':wd===0?'#FEF6F6':wk?'#F8FAFC':'#fff',
         ring:k===TODAY?'#5B5BD6':'transparent',weight:k===TODAY?'var(--fw-strong,600)':'var(--fw-body,400)',numColor:wd===0?'#DC2626':hol?'#C2410C':'#0F172A',label,hasLabel:!!label,
-        hasCount:ts.length>0,count:ts.length+(narrow?'':ts.length===1?' task':' tasks'),countColor:late?'#DC2626':'#475569'}); }
+        dots:ts.map(t=>this.stOf(t)).filter(k=>k!=='todo').slice(0,narrow?4:10).map(k=>DOT[k]),hasCount:ts.length>0,count:ts.length+(narrow?'':ts.length===1?' task':' tasks'),countColor:late?'#DC2626':'#475569'}); }
     while(cells.length%7) cells.push({blank:true});
-    cells.forEach(c=>{ if(c.blank) Object.assign(c,{n:'',go:()=>{},cursor:'default',bg:'rgba(100,116,139,.09)',ring:'transparent',weight:'var(--fw-body,400)',numColor:'#64748B',hasLabel:false,hasCount:false}); });
+    cells.forEach(c=>{ if(c.blank) Object.assign(c,{n:'',go:()=>{},cursor:'default',bg:'rgba(100,116,139,.09)',ring:'transparent',weight:'var(--fw-body,400)',numColor:'#64748B',hasLabel:false,dots:[],hasCount:false}); });
     const selIn=s.selDay.startsWith(s.calYM);
     const dayTs=selIn?calBase.filter(t=>t.due===s.selDay):[];
     const dayLv=selIn?approved.filter(l=>l.from<=s.selDay&&l.to>=s.selDay):[];
@@ -3463,7 +3469,7 @@ class Component extends DCLogic {
     const cal={label:ymLabel(s.calYM),prev:()=>{this.setState({calYM:ymAdd(s.calYM,-1)});setTimeout(()=>this.rollSeries(),0);},next:()=>{this.setState({calYM:ymAdd(s.calYM,1)});setTimeout(()=>this.rollSeries(),0);},today:()=>{this.setState({calYM:TODAY.slice(0,7),selDay:TODAY});setTimeout(()=>this.rollSeries(),0);},
       who:s.calWho,brand:s.calBrand,dept:s.calDept,onWho:e=>this.setState({calWho:e.target.value}),onBrand:e=>this.setState({calBrand:e.target.value}),onDept:e=>this.setState({calDept:e.target.value}),
       stats:statDef.map(([id,label,value,color])=>{const a=s.calStatus===id; return {label,value:String(value),color,bg:a?'rgba(91,91,214,.1)':'rgba(100,116,139,.05)',border:a?'#5B5BD6':'transparent',go:()=>this.setState({calStatus:id})};}),
-      dows:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>narrow?d[0]:d.toUpperCase()),cells,
+      dows:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>narrow?d[0]:d.toUpperCase()),cells,legend:['doing','review','blocked','done','late'].map(k=>DOT[k]),
       dayTitle:sd?DOW[sd.getDay()]+', '+sd.getDate()+' '+MNF[sd.getMonth()]:'Select a day',dayItems,dayEmpty:!dayItems.length,
       addTask:()=>this.openModal('task',{due:selIn?s.selDay:''})};
 
