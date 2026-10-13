@@ -1551,9 +1551,9 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid r
 
   <aside style="width:240px;flex-shrink:0;display:flex;flex-direction:column;background:{{ sb.bg }};color:{{ sb.fg }};border-right:1px solid rgba(100,116,139,.2);position:{{ sb.position }};top:0;left:0;bottom:0;z-index:30;transform:{{ sb.transform }};transition:transform 200ms ease;--icon-stroke:{{ sb.icon }};--icon-accent:#5B5BD6">
     <div sc-camel-on-click="{{ openProfile }}" title="Your profile" style="display:flex;align-items:center;gap:10px;padding:22px 20px 18px;cursor:pointer" style-hover="background:{{ sb.hover }}">
-      <span style="width:32px;height:32px;border-radius:9px;background:#5B5BD6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:var(--fw-strong,600);font-size:15px;flex-shrink:0">O</span>
+      <span style="width:32px;height:32px;border-radius:9px;background:#5B5BD6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:var(--fw-strong,600);font-size:15px;flex-shrink:0">K</span>
       <div style="display:flex;flex-direction:column;line-height:1.2">
-        <span style="font-weight:var(--fw-strong,600);font-size:15px">Operations</span>
+        <span style="font-weight:var(--fw-strong,600);font-size:15px;letter-spacing:.12em">KEEL</span>
         <span style="font-size:11px;opacity:.7">{{ wsName }}</span>
       </div>
     </div>
@@ -3112,7 +3112,7 @@ class Component extends DCLogic {
     this.setState(z=>({notifs:[n,...(z.notifs||[])].slice(0,300)})); }
   alertNotif(n){ this.toast(n.text);
     try{ if(!this.state.pushOn&&document.visibilityState!=='visible'&&'Notification' in window&&Notification.permission==='granted'){
-      const x=new Notification(this.state.wsName||'Operations',{body:n.text,tag:n.id}); x.onclick=()=>{ window.focus(); this.openNotif(n); x.close(); }; } }catch(e){} }
+      const x=new Notification(this.state.wsName||'KEEL',{body:n.text,tag:n.id}); x.onclick=()=>{ window.focus(); this.openNotif(n); x.close(); }; } }catch(e){} }
   openNotif(n){ this.setState(z=>({notifOpen:false,notifs:(z.notifs||[]).map(x=>x.id===n.id&&!x.read?{...x,read:true}:x)}));
     if(n.task&&this.state.tasks.some(t=>t.id===n.task)) this.openTask(n.task); }
   async enablePush(){ try{ await window.Cloud.enablePush(); this.setState({pushOn:true}); this.toast('Alerts are on for this device.'); }
